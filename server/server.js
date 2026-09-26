@@ -3,6 +3,17 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+// Fix for Node 18+ native fetch issues on Windows (used by Gemini SDK)
+// The native `fetch` uses undici which sometimes fails with IPv6.
+try {
+  const { setGlobalDispatcher, Agent } = require('undici');
+  setGlobalDispatcher(new Agent({ connect: { lookup: dns.lookup } }));
+} catch (e) {
+  console.log('undici not available, proceeding with default fetch');
+}
+
 // Load environment variables from parent directory or current directory
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config();

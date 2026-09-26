@@ -7,19 +7,30 @@ const memoryStore = require('../config/memoryStore');
 const analyzeReceipt = async (req, res, next) => {
   try {
     const userId = 'demo-user';
-    const isDemo = req.query.demo === 'true' || process.env.DEMO_MODE === 'true';
+    // Only use demo data when explicitly requested via ?demo=true (the "Try Demo Receipt" button)
+    // Real file uploads should always attempt AI analysis
+    const isExplicitDemo = req.query.demo === 'true';
     let analysisResult;
 
-    if (isDemo || !req.file) {
-      // Demo mode — use predefined data
+    if (isExplicitDemo || !req.file) {
+      // Demo button clicked or no file uploaded — use predefined data
       analysisResult = {
         extractedText: demoReceiptText,
         products: demoProducts,
         predictedWaste: demoWasteSummary
       };
     } else {
-      // AI mode — use uploaded image
-      analysisResult = await aiService.extractAndAnalyze(req.file.buffer, req.file.mimetype);
+      // Real image uploaded — try AI analysis, fall back to demo if it fails
+      try {
+        analysisResult = await aiService.extractAndAnalyze(req.file.buffer, req.file.mimetype);
+      } catch (aiError) {
+        console.warn('⚠️  AI analysis failed, falling back to demo data:', aiError.message);
+        analysisResult = {
+          extractedText: demoReceiptText,
+          products: demoProducts,
+          predictedWaste: demoWasteSummary
+        };
+      }
     }
 
     let savedScan;
