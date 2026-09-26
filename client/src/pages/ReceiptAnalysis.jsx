@@ -128,18 +128,64 @@ export default function ReceiptAnalysis() {
             const confidencePercent = Math.round(product.confidence * 100);
             return (
               <div key={idx} className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-4 flex-1">
                   <span className="text-2xl">{config.emoji}</span>
-                  <div>
+                  <div className="w-full">
                     <h3 className="text-base font-bold text-gray-900">{product.name}</h3>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-400">
-                      <Package className="w-3.5 h-3.5" />
-                      <span>{product.packaging || 'Unknown packaging'}</span>
+                    
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-3.5 h-3.5" />
+                        <span>{product.packaging || 'Unknown packaging'}</span>
+                      </div>
+                      
+                      {product.storageCondition && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold ml-2">
+                           <span>{product.storageCondition.toLowerCase().includes('refrigerat') ? '❄️' : product.storageCondition.toLowerCase().includes('frozen') ? '🧊' : '🌡️'}</span>
+                           {product.storageCondition}
+                        </div>
+                      )}
                     </div>
+                    
+                    {product.daysRemaining !== undefined && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${product.daysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : product.daysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                           {product.isEstimatedExpiry ? '~ ' : ''}
+                           {product.daysRemaining < 0 ? 'Expired' : product.daysRemaining === 0 ? 'Expires today' : `${product.daysRemaining} days left`}
+                           {product.expiryDate && ` (Expires: ${new Date(product.expiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
+                           {product.isEstimatedExpiry && ' (estimated)'}
+                         </span>
+                      </div>
+                    )}
+
+                    {product.wasteStreams && product.wasteStreams.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {product.wasteStreams.map((stream, sIdx) => {
+                          const streamConfig = wasteConfig[stream.wasteCategory] || wasteConfig['Other'];
+                          const timingLabels = {
+                            'immediate': { label: 'Dispose now', icon: '🔵' },
+                            'on_consumption': { label: 'When consumed', icon: '🟡' },
+                            'on_expiry': { label: 'If expired/spoiled', icon: '🔴' }
+                          };
+                          const timing = timingLabels[stream.timing] || { label: stream.timing, icon: '⚪' };
+                          return (
+                            <div key={sIdx} className="flex items-center gap-2 text-xs">
+                              <span>{timing.icon}</span>
+                              <span className="font-bold text-gray-700">{timing.label}:</span>
+                              <span className="text-gray-600">{stream.type}</span>
+                              <span className={`px-2 py-0.5 rounded-full font-bold border ${streamConfig.bg} ${streamConfig.text} ${streamConfig.border}`}>
+                                {stream.wasteCategory}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3 pl-10 sm:pl-0">
+                <div className="flex items-center gap-3 pl-10 sm:pl-0 flex-shrink-0">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${config.bg} ${config.text} ${config.border}`}>
                     {product.wasteCategory}
                   </span>

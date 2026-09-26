@@ -26,14 +26,29 @@ class AIService {
 Extract all grocery/product items from this receipt and intelligently predict the most likely waste/packaging category for each item.
 
 Return ONLY a valid JSON array of objects. 
-Each object must have "name", "wasteCategory", and "packaging".
+Each object must have "name", "wasteCategory", "packaging", "shelfLifeDays", "storageCondition", and "wasteStreams".
 Valid waste categories are exactly one of: "Plastic", "Paper/Cardboard", "Glass", "Metal", "Organic", "Battery/Special Waste", "E-waste", "Other".
+
+- shelfLifeDays (integer): estimated shelf life in days from purchase
+- storageCondition (string): e.g., "Refrigerated", "Room Temperature", "Cool & Dry"
+- wasteStreams (array of objects): each with { "type", "wasteCategory", "timing" } where:
+  - type is a description like "Egg carton" or "Eggshells"
+  - wasteCategory is one of the valid categories
+  - timing is one of: "immediate" (packaging waste, disposable when emptied), "on_consumption" (generated when product is consumed), "on_expiry" (generated when product expires/spoils)
 
 Example format: 
 [
-  {"name": "Amul Milk 1L", "packaging": "Plastic Pouch", "wasteCategory": "Plastic"},
-  {"name": "Farm Fresh Eggs 1 Dozen", "packaging": "Cardboard Carton", "wasteCategory": "Organic"},
-  {"name": "Tomatoes", "packaging": "Thin Plastic Bag", "wasteCategory": "Organic"}
+  {
+    "name": "Farm Fresh Eggs 1 Dozen",
+    "packaging": "Cardboard Carton",
+    "wasteCategory": "Organic",
+    "shelfLifeDays": 21,
+    "storageCondition": "Refrigerated",
+    "wasteStreams": [
+      {"type": "Egg carton", "wasteCategory": "Paper/Cardboard", "timing": "immediate"},
+      {"type": "Eggshells", "wasteCategory": "Organic", "timing": "on_consumption"}
+    ]
+  }
 ]
 
 CRITICAL RULES:
@@ -48,7 +63,9 @@ CRITICAL RULES:
 
       // Vision-capable models to try, in order of preference
       const modelsToTry = [
-        'qwen/qwen3.8-27b'
+        'llama-4-scout-17b-16e-instruct',
+        'qwen-2.5-vl-72b',
+        'llama-4-maverick-17b-128e-instruct'
       ];
       let responseText = null;
       let lastError = null;
@@ -102,11 +119,28 @@ CRITICAL RULES:
       let products = [];
       try {
         products = JSON.parse(text);
-        // Add a confidence score for the UI
-        products = products.map(p => ({
-          ...p,
-          confidence: Math.round((0.85 + Math.random() * 0.14) * 100) / 100
-        }));
+        
+        const today = new Date();
+        
+        // Add a confidence score for the UI and compute expiry dates
+        products = products.map(p => {
+          let expiryDate = null;
+          let daysRemaining = null;
+          
+          if (p.shelfLifeDays) {
+            expiryDate = new Date(today);
+            expiryDate.setDate(today.getDate() + p.shelfLifeDays);
+            daysRemaining = p.shelfLifeDays;
+          }
+          
+          return {
+            ...p,
+            confidence: Math.round((0.85 + Math.random() * 0.14) * 100) / 100,
+            expiryDate,
+            isEstimatedExpiry: true,
+            daysRemaining
+          };
+        });
       } catch (e) {
         console.error('Failed to parse AI response as JSON:', text);
         throw new Error('AI returned invalid JSON');
@@ -127,14 +161,28 @@ CRITICAL RULES:
 
   aggregateWaste(products) {
     const categoryCounts = {};
+    const streams = [];
+
     products.forEach(p => {
       categoryCounts[p.wasteCategory] = (categoryCounts[p.wasteCategory] || 0) + 1;
+      
+      if (p.wasteStreams && Array.isArray(p.wasteStreams)) {
+        p.wasteStreams.forEach(stream => {
+          streams.push({
+            productName: p.name,
+            ...stream
+          });
+        });
+      }
     });
 
-    return Object.keys(categoryCounts).map(category => ({
-      category,
-      count: categoryCounts[category]
-    }));
+    return {
+      categories: Object.keys(categoryCounts).map(category => ({
+        category,
+        count: categoryCounts[category]
+      })),
+      streams
+    };
   }
 }
 

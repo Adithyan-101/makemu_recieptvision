@@ -1,7 +1,7 @@
 const ReceiptScan = require('../models/ReceiptScan');
 const UserWasteProfile = require('../models/UserWasteProfile');
 const aiService = require('../services/aiService');
-const { demoReceiptText, demoProducts, demoWasteSummary } = require('../services/demoData');
+const { demoReceiptText, demoProducts, demoWasteSummary, calculateDates } = require('../services/demoData');
 const memoryStore = require('../config/memoryStore');
 
 const analyzeReceipt = async (req, res, next) => {
@@ -14,9 +14,14 @@ const analyzeReceipt = async (req, res, next) => {
 
     if (isExplicitDemo || !req.file) {
       // Demo button clicked or no file uploaded — use predefined data
+      const freshDemoProducts = demoProducts.map(p => ({
+        ...p,
+        ...calculateDates(p.shelfLifeDays || 0)
+      }));
+
       analysisResult = {
         extractedText: demoReceiptText,
-        products: demoProducts,
+        products: freshDemoProducts,
         predictedWaste: demoWasteSummary
       };
     } else {
@@ -25,20 +30,26 @@ const analyzeReceipt = async (req, res, next) => {
         analysisResult = await aiService.extractAndAnalyze(req.file.buffer, req.file.mimetype);
       } catch (aiError) {
         console.warn('⚠️  AI analysis failed, falling back to demo data:', aiError.message);
+        const freshDemoProducts = demoProducts.map(p => ({
+          ...p,
+          ...calculateDates(p.shelfLifeDays || 0)
+        }));
         analysisResult = {
           extractedText: demoReceiptText,
-          products: demoProducts,
+          products: freshDemoProducts,
           predictedWaste: demoWasteSummary
         };
       }
     }
 
     let savedScan;
+    const purchaseDate = new Date();
 
     if (req.dbConnected) {
       // Use MongoDB
       const receiptScan = new ReceiptScan({
         userId,
+        purchaseDate,
         extractedText: analysisResult.extractedText,
         products: analysisResult.products,
         predictedWaste: analysisResult.predictedWaste,
@@ -53,7 +64,7 @@ const analyzeReceipt = async (req, res, next) => {
         profile = new UserWasteProfile({ userId, ecoScore: 50 });
       }
 
-      analysisResult.predictedWaste.forEach(waste => {
+      analysisResult.predictedWaste.categories.forEach(waste => {
         const key = waste.category;
         if (profile.wasteCounts[key] !== undefined) {
           profile.wasteCounts[key] += waste.count;
@@ -81,6 +92,7 @@ const analyzeReceipt = async (req, res, next) => {
       // Use in-memory store
       savedScan = memoryStore.addScan({
         userId,
+        purchaseDate,
         extractedText: analysisResult.extractedText,
         products: analysisResult.products,
         predictedWaste: analysisResult.predictedWaste,
@@ -89,7 +101,7 @@ const analyzeReceipt = async (req, res, next) => {
 
       // Update in-memory profile
       const profile = memoryStore.getProfile();
-      analysisResult.predictedWaste.forEach(waste => {
+      analysisResult.predictedWaste.categories.forEach(waste => {
         const key = waste.category;
         if (profile.wasteCounts[key] !== undefined) {
           profile.wasteCounts[key] += waste.count;

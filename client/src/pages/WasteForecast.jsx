@@ -20,6 +20,17 @@ const wasteEmojis = {
   'Organic': '🥗', 'Battery/Special Waste': '🔋', 'E-waste': '💡', 'Other': '🗑️'
 };
 
+const wasteConfig = {
+  'Plastic': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  'Paper/Cardboard': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  'Glass': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+  'Metal': { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-300' },
+  'Organic': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  'Battery/Special Waste': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  'E-waste': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  'Other': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' }
+};
+
 export default function WasteForecast() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -81,11 +92,20 @@ export default function WasteForecast() {
   const pieData = predictedWaste.map(({ category, count }) => ({ name: category, value: count }));
   const barData = predictedWaste.map(({ category, count }) => ({ name: category, value: count }));
 
-  const timeline = {
-    short: products.filter(p => p.wasteCategory === 'Organic' || (p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh')),
-    medium: products.filter(p => p.wasteCategory === 'Plastic' || p.wasteCategory === 'Metal' || p.wasteCategory === 'Glass').filter(p => !((p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh'))),
-    long: products.filter(p => p.wasteCategory === 'Paper/Cardboard' || p.wasteCategory === 'Battery/Special Waste' || p.wasteCategory === 'E-waste' || p.wasteCategory === 'Other')
-  };
+  let timeline = { today: [], week: [], later: [] };
+  
+  const hasExpiryData = products.some(p => p.daysRemaining !== undefined || p.wasteStreams?.length > 0);
+  
+  if (hasExpiryData) {
+    timeline.today = products.filter(p => (p.daysRemaining !== undefined && p.daysRemaining <= 0) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'immediate')));
+    timeline.week = products.filter(p => (p.daysRemaining !== undefined && p.daysRemaining > 0 && p.daysRemaining <= 7) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'on_consumption')));
+    timeline.later = products.filter(p => (p.daysRemaining !== undefined && p.daysRemaining > 7) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'on_expiry')));
+  } else {
+    // Fallback logic
+    timeline.today = products.filter(p => p.wasteCategory === 'Organic' || (p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh'));
+    timeline.week = products.filter(p => p.wasteCategory === 'Plastic' || p.wasteCategory === 'Metal' || p.wasteCategory === 'Glass').filter(p => !((p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh')));
+    timeline.later = products.filter(p => p.wasteCategory === 'Paper/Cardboard' || p.wasteCategory === 'Battery/Special Waste' || p.wasteCategory === 'E-waste' || p.wasteCategory === 'Other');
+  }
 
   const calculateEcoScore = () => {
     const total = products.length;
@@ -97,9 +117,9 @@ export default function WasteForecast() {
   const ecoScore = calculateEcoScore();
 
   const timelineSteps = [
-    { key: 'short', title: 'Next 1-3 Days', subtitle: 'Perishables and immediate consumption items', icon: Clock, color: 'emerald', emoji: '🥗', items: timeline.short },
-    { key: 'medium', title: 'Next Few Days', subtitle: 'Beverages, snacks, and general plastics', icon: Calendar, color: 'blue', emoji: '🥤', items: timeline.medium },
-    { key: 'long', title: 'Later', subtitle: 'Cardboard boxes, special items', icon: CalendarDays, color: 'amber', emoji: '📦', items: timeline.long }
+    { key: 'today', title: hasExpiryData ? 'Today / Immediate' : 'Next 1-3 Days', subtitle: hasExpiryData ? 'Expired items or immediate disposal' : 'Perishables and immediate consumption items', icon: AlertTriangle, color: 'emerald', emoji: '🥗', items: timeline.today, timeframe: 'immediate' },
+    { key: 'week', title: 'This Week (1-7 days)', subtitle: 'Items expiring soon or on consumption', icon: Clock, color: 'blue', emoji: '🥤', items: timeline.week, timeframe: 'on_consumption' },
+    { key: 'later', title: 'Later (7+ days)', subtitle: 'Long shelf life or dispose on expiry', icon: CalendarDays, color: 'amber', emoji: '📦', items: timeline.later, timeframe: 'on_expiry' }
   ];
 
   return (
@@ -135,10 +155,10 @@ export default function WasteForecast() {
           </div>
           <div className="flex flex-wrap justify-center gap-4 mt-4">
             {pieData.map((entry, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm font-semibold">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: wasteChartColors[entry.name] || wasteChartColors['Other'] }} />
-                <span className="text-gray-500">{entry.name}</span>
-              </div>
+               <div key={index} className="flex items-center gap-2 text-sm font-semibold">
+                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: wasteChartColors[entry.name] || wasteChartColors['Other'] }} />
+                 <span className="text-gray-500">{entry.name}</span>
+               </div>
             ))}
           </div>
         </div>
@@ -189,14 +209,47 @@ export default function WasteForecast() {
                 <div className="flex-1">
                   <h3 className="text-lg font-black text-gray-900 mb-1">{step.title}</h3>
                   <p className="text-sm text-gray-400 mb-4 font-medium">{step.subtitle}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {step.items.length > 0 ? step.items.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
-                        <span className="text-xl">{wasteEmojis[item.wasteCategory] || step.emoji}</span>
-                        <div>
-                          <p className="font-bold text-gray-900 text-sm">{item.name}</p>
-                          <p className="text-xs text-gray-400 font-medium">{item.packaging || item.category}</p>
+                      <div key={i} className="flex flex-col gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{wasteEmojis[item.wasteCategory] || step.emoji}</span>
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-gray-500 font-medium">{item.packaging || item.category}</p>
+                              {item.storageCondition && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                                  {item.storageCondition.toLowerCase().includes('refrigerat') ? '❄️' : item.storageCondition.toLowerCase().includes('frozen') ? '🧊' : '🌡️'} {item.storageCondition}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+
+                        {item.daysRemaining !== undefined && (
+                           <div className="mt-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.daysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : item.daysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                                {item.daysRemaining < 0 ? 'Expired' : item.daysRemaining === 0 ? 'Expires today' : `${item.daysRemaining} days left`}
+                              </span>
+                           </div>
+                        )}
+
+                        {item.wasteStreams && item.wasteStreams.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
+                            {item.wasteStreams.filter(ws => ws.timing === step.timeframe || (!hasExpiryData)).map((stream, sIdx) => {
+                              const streamConfig = wasteConfig[stream.wasteCategory] || wasteConfig['Other'];
+                              return (
+                                <div key={sIdx} className="flex items-center gap-1.5 text-[11px]">
+                                  <span className="text-gray-600 truncate">{stream.type}:</span>
+                                  <span className={`px-1.5 py-0.5 rounded-full font-bold border ${streamConfig.bg} ${streamConfig.text} ${streamConfig.border} whitespace-nowrap`}>
+                                    {stream.wasteCategory}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )) : <p className="text-sm text-gray-300 italic p-2 font-medium">No items predicted for this timeframe.</p>}
                   </div>
