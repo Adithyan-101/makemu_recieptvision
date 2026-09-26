@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, Menu, X, Scan, LayoutDashboard, Map, History, User } from 'lucide-react';
+import { Leaf, Menu, X, Scan, LayoutDashboard, Map, History, User, CheckSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Navbar() {
@@ -21,6 +21,7 @@ export default function Navbar() {
   const links = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Scan', path: '/scan', icon: Scan },
+    { name: 'Tasks', path: '/tasks', icon: CheckSquare },
     { name: 'Map', path: '/map', icon: Map },
     { name: 'History', path: '/history', icon: History },
     { name: 'Profile', path: '/profile', icon: User },

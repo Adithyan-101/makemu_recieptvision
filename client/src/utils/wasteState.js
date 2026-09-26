@@ -11,9 +11,7 @@ const STORAGE_KEY = 'wasteStates';
 
 export const WASTE_STATES = {
   GENERATED: 'generated',
-  PILED_UP: 'piled_up',
-  CLEANED: 'cleaned',
-  READY: 'ready',
+  DISPOSED: 'disposed',
 };
 
 export const STATE_CONFIG = {
@@ -27,43 +25,21 @@ export const STATE_CONFIG = {
     dotColor: 'bg-gray-400',
     description: 'Waste has been generated from this product',
   },
-  [WASTE_STATES.PILED_UP]: {
-    label: 'Piled Up',
-    shortLabel: 'Piled',
-    emoji: '📦',
-    bg: 'bg-amber-50',
-    text: 'text-amber-700',
-    border: 'border-amber-200',
-    dotColor: 'bg-amber-500',
-    description: 'Collected and accumulated for processing',
-  },
-  [WASTE_STATES.CLEANED]: {
-    label: 'Cleaned',
-    shortLabel: 'Clean',
-    emoji: '✨',
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    border: 'border-blue-200',
-    dotColor: 'bg-blue-500',
-    description: 'Emptied, rinsed, and ready for disposal',
-  },
-  [WASTE_STATES.READY]: {
-    label: 'Ready to Dispose',
-    shortLabel: 'Ready',
-    emoji: '✅',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    border: 'border-emerald-200',
-    dotColor: 'bg-emerald-500',
-    description: 'Prepared and ready for proper disposal',
+  [WASTE_STATES.DISPOSED]: {
+    label: 'Disposed',
+    shortLabel: 'Done',
+    emoji: '🎉',
+    bg: 'bg-gray-100',
+    text: 'text-gray-400',
+    border: 'border-gray-200',
+    dotColor: 'bg-gray-300',
+    description: 'Waste has been correctly disposed of',
   },
 };
 
 export const STATE_ORDER = [
   WASTE_STATES.GENERATED,
-  WASTE_STATES.PILED_UP,
-  WASTE_STATES.CLEANED,
-  WASTE_STATES.READY,
+  WASTE_STATES.DISPOSED,
 ];
 
 /**
@@ -116,29 +92,31 @@ export function needsCleaning(wasteCategory) {
 
 /** Get the applicable flow steps for a waste category */
 export function getFlowSteps(wasteCategory) {
-  if (needsCleaning(wasteCategory)) {
-    // Recyclables: Generated → Pile Up → Cleaned → Ready
-    return STATE_ORDER;
-  }
-  // Non-cleanable (Organic, Paper, etc.): Generated → Pile Up → Ready (skip Cleaned)
-  return [WASTE_STATES.GENERATED, WASTE_STATES.PILED_UP, WASTE_STATES.READY];
+  return STATE_ORDER;
 }
 
 /** Get all states summary for dashboard stats */
-export function getStateSummary() {
+export function getStateSummary(totalServerItems = 0) {
   const states = loadStates();
   const summary = {
     [WASTE_STATES.GENERATED]: 0,
-    [WASTE_STATES.PILED_UP]: 0,
-    [WASTE_STATES.CLEANED]: 0,
-    [WASTE_STATES.READY]: 0,
+    [WASTE_STATES.DISPOSED]: 0,
     total: 0,
   };
+  
+  let totalInteracted = 0;
   Object.values(states).forEach(state => {
     if (summary[state] !== undefined) {
       summary[state]++;
     }
-    summary.total++;
+    totalInteracted++;
   });
+  
+  summary.total = Math.max(totalInteracted, totalServerItems);
+  
+  if (totalServerItems > totalInteracted) {
+    summary[WASTE_STATES.GENERATED] += (totalServerItems - totalInteracted);
+  }
+  
   return summary;
 }

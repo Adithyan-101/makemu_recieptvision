@@ -177,7 +177,7 @@ export default function Dashboard() {
           </div>
 
           {/* Waste State Progress */}
-          {getStateSummary().total > 0 && (
+          {getStateSummary(data?.totalItems || 0).total > 0 && (
             <div className="animate-fade-in-up bg-white rounded-3xl p-6 shadow-sm border border-gray-100" style={{ animationDelay: '0.15s' }}>
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 bg-amber-50 rounded-xl">
@@ -185,21 +185,25 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">Waste Processing</h2>
-                  <p className="text-xs text-gray-400 font-medium">Track your waste through Pile Up → Clean → Ready</p>
+                  <p className="text-xs text-gray-400 font-medium">Track your waste from generation to disposal</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {STATE_ORDER.map(state => {
                   const config = STATE_CONFIG[state];
-                  const summary = getStateSummary();
+                  const summary = getStateSummary(data?.totalItems || 0);
                   return (
-                    <div key={state} className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${config.bg} ${config.border}`}>
+                    <Link 
+                      key={state} 
+                      to={`/tasks?state=${state}`}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${config.bg} ${config.border} hover:scale-105 hover:shadow-md transition-all duration-200 cursor-pointer`}
+                    >
                       <span className="text-2xl">{config.emoji}</span>
                       <div>
                         <p className={`text-xl font-black ${config.text}`}>{summary[state]}</p>
                         <p className="text-[11px] font-bold text-gray-500">{config.label}</p>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

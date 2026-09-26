@@ -116,12 +116,12 @@ export default function ReceiptAnalysis() {
           <p className="text-sm text-gray-500 font-medium">Recyclable Items</p>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-amber-100 shadow-sm">
-          <p className="text-3xl font-black text-amber-600">{stateSummary[WASTE_STATES.PILED_UP]}</p>
-          <p className="text-sm text-gray-500 font-medium">📦 Piled Up</p>
+          <p className="text-3xl font-black text-amber-600">{stateSummary[WASTE_STATES.GENERATED] || 0}</p>
+          <p className="text-sm text-gray-500 font-medium">🗑️ New Items</p>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm">
-          <p className="text-3xl font-black text-emerald-600">{stateSummary[WASTE_STATES.READY]}</p>
-          <p className="text-sm text-gray-500 font-medium">✅ Ready</p>
+          <p className="text-3xl font-black text-emerald-600">{stateSummary[WASTE_STATES.DISPOSED] || 0}</p>
+          <p className="text-sm text-gray-500 font-medium">🎉 Disposed</p>
         </div>
       </div>
 

@@ -139,10 +139,10 @@ export default function WasteForecast() {
       </div>
 
       {/* Waste State Summary Bar */}
-      <div className="animate-fade-in-up grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8" style={{ animationDelay: '0.05s' }}>
+      <div className="animate-fade-in-up grid grid-cols-2 gap-3 mb-8" style={{ animationDelay: '0.05s' }}>
         {STATE_ORDER.map(state => {
           const config = STATE_CONFIG[state];
-          const summary = getStateSummary();
+          const summary = getStateSummary(products.length);
           return (
             <div key={state} className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${config.bg} ${config.border}`}>
               <span className="text-xl">{config.emoji}</span>

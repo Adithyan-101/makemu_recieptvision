@@ -23,7 +23,7 @@ export default function WasteStateTracker({ productName, wasteCategory, scanId, 
   const flowSteps = getFlowSteps(wasteCategory);
   const currentIdx = flowSteps.indexOf(currentState);
   const nextState = getNextStateInFlow(currentState, flowSteps);
-  const isComplete = currentState === WASTE_STATES.READY;
+  const isComplete = currentState === WASTE_STATES.DISPOSED;
   const stateConfig = STATE_CONFIG[currentState];
 
   const advanceState = useCallback(() => {
@@ -100,17 +100,10 @@ export default function WasteStateTracker({ productName, wasteCategory, scanId, 
             className={`
               flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold
               transition-all duration-200 active:scale-95
-              ${nextState === WASTE_STATES.CLEANED 
-                ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-sm shadow-blue-200' 
-                : nextState === WASTE_STATES.READY 
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-200'
-                  : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200'
-              }
+              bg-gray-800 hover:bg-gray-900 text-white shadow-sm shadow-gray-300
             `}
           >
-            {nextState === WASTE_STATES.PILED_UP && '📦 Mark Piled Up'}
-            {nextState === WASTE_STATES.CLEANED && '✨ Mark Cleaned'}
-            {nextState === WASTE_STATES.READY && '✅ Ready to Dispose'}
+            🎉 Mark Disposed
             <ArrowRight className="w-3 h-3" />
           </button>
         )}
@@ -122,12 +115,7 @@ export default function WasteStateTracker({ productName, wasteCategory, scanId, 
         )}
       </div>
 
-      {/* Cleaning hint for recyclables */}
-      {currentState === WASTE_STATES.PILED_UP && needsCleaning(wasteCategory) && (
-        <p className="mt-2 text-[11px] text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg font-medium">
-          💡 Rinse and clean this {wasteCategory.toLowerCase()} packaging before marking as cleaned.
-        </p>
-      )}
+
     </div>
   );
 }

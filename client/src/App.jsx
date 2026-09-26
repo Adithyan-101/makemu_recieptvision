@@ -9,6 +9,7 @@ import DisposalGuide from './pages/DisposalGuide'
 import NearbyMap from './pages/NearbyMap'
 import ScanHistory from './pages/ScanHistory'
 import Profile from './pages/Profile'
+import PendingTasks from './pages/PendingTasks'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/disposal" element={<DisposalGuide />} />
           <Route path="/map" element={<NearbyMap />} />
           <Route path="/history" element={<ScanHistory />} />
+          <Route path="/tasks" element={<PendingTasks />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, Package, ArrowRight, ScanLine, History } from 'lucide-react';
 import axios from 'axios';
+import { getWasteState, getProductKey, WASTE_STATES, STATE_CONFIG } from '../utils/wasteState';
 
 export default function ScanHistory() {
   const [scans, setScans] = useState([]);
@@ -21,6 +22,23 @@ export default function ScanHistory() {
     };
     fetchHistory();
   }, []);
+
+  // Get waste state progress for a scan's products
+  const getScanProgress = (scan) => {
+    const prods = scan.products || [];
+    if (prods.length === 0) return null;
+    
+    const scanId = scan._id || 'local';
+    const counts = { generated: 0, disposed: 0 };
+    
+    prods.forEach(p => {
+      const key = getProductKey(p.name, scanId);
+      const state = getWasteState(key);
+      if (counts[state] !== undefined) counts[state]++;
+    });
+    
+    return { ...counts, total: prods.length };
+  };
 
   if (loading) {
     return (
@@ -62,49 +80,90 @@ export default function ScanHistory() {
         </div>
       ) : (
         <div className="space-y-4 stagger-children">
-          {scans.map((scan, idx) => (
-            <div key={scan._id || idx} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-gray-50 rounded-2xl mt-1">
-                    <Calendar className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-gray-900">
-                      {new Date(scan.createdAt).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </h3>
-                    <p className="text-sm text-gray-400 flex items-center gap-2 mt-1 font-medium">
-                      <Package className="w-4 h-4" />
-                      {scan.products?.length || scan.totalItems || 0} products identified
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {scan.predictedWaste && scan.predictedWaste.slice(0, 4).map(({ category, count }) => (
-                        <span key={category} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-50 text-gray-600 border border-gray-100">
-                          {category}: <span className="text-gray-900">{count}</span>
-                        </span>
-                      ))}
-                      {scan.predictedWaste && scan.predictedWaste.length > 4 && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-50 text-gray-400">
-                          +{scan.predictedWaste.length - 4} more
-                        </span>
+          {scans.map((scan, idx) => {
+            const progress = getScanProgress(scan);
+            const wasteCategories = Array.isArray(scan.predictedWaste)
+              ? scan.predictedWaste
+              : (scan.predictedWaste?.categories || []);
+
+            return (
+              <div key={scan._id || idx} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-gray-50 rounded-2xl mt-1">
+                      <Calendar className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-gray-900">
+                        {new Date(scan.createdAt).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </h3>
+                      <p className="text-sm text-gray-400 flex items-center gap-2 mt-1 font-medium">
+                        <Package className="w-4 h-4" />
+                        {scan.products?.length || scan.totalItems || 0} products identified
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {wasteCategories.slice(0, 4).map(({ category, count }) => (
+                          <span key={category} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-50 text-gray-600 border border-gray-100">
+                            {category}: <span className="text-gray-900">{count}</span>
+                          </span>
+                        ))}
+                        {wasteCategories.length > 4 && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-50 text-gray-400">
+                            +{wasteCategories.length - 4} more
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Waste State Progress */}
+                      {progress && progress.total > 0 && (
+                        <div className="mt-4 pt-3 border-t border-gray-100">
+                          {/* Progress bar */}
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                              {progress.disposed > 0 && (
+                                <div
+                                  className="h-full bg-emerald-500 transition-all duration-500"
+                                  style={{ width: `${(progress.disposed / progress.total) * 100}%` }}
+                                />
+                              )}
+                            </div>
+                            <span className="text-xs font-black text-gray-500 whitespace-nowrap">
+                              {progress.disposed}/{progress.total}
+                            </span>
+                          </div>
+                          
+                          {/* State badges */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {progress.disposed > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                🎉 {progress.disposed} done
+                              </span>
+                            )}
+                            {progress.generated > 0 && progress.generated < progress.total && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-200">
+                                🗑️ {progress.generated} new
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
 
-                <div className="sm:text-right flex sm:block border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
-                  <Link 
-                    to={`/analysis/${scan._id}`}
-                    className="group inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto justify-center shadow-sm"
-                  >
-                    View Details
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
+                  <div className="sm:text-right flex sm:block border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
+                    <Link 
+                      to={`/analysis/${scan._id}`}
+                      className="group inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto justify-center shadow-sm"
+                    >
+                      View Details
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

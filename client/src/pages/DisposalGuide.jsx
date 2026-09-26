@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Recycle, Trash2, BatteryWarning, Monitor, MapPin, AlertTriangle, ChevronDown, ChevronUp, ArrowRight, Sparkles, BookOpen } from 'lucide-react';
+import { Recycle, Trash2, BatteryWarning, Monitor, MapPin, AlertTriangle, ChevronDown, ChevronUp, ArrowRight, Sparkles, BookOpen, Check } from 'lucide-react';
+import { getStateSummary, STATE_CONFIG, WASTE_STATES, getWasteState, setWasteState, getFlowSteps, getProductKey, needsCleaning } from '../utils/wasteState';
 
 const categoryConfig = {
   'Plastic': { icon: Recycle, color: 'emerald', emoji: '♻️' },
@@ -20,6 +21,8 @@ export default function DisposalGuide() {
   const [rules, setRules] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [stateRefresh, setStateRefresh] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,8 +48,15 @@ export default function DisposalGuide() {
         const localData = localStorage.getItem('lastAnalysis');
         if (localData) {
           const parsed = JSON.parse(localData);
-          if (parsed.predictedWaste && parsed.predictedWaste.length > 0) {
-            setWasteCategories(parsed.predictedWaste.map(w => w.category));
+          const prods = parsed.products || [];
+          setProducts(prods);
+          
+          const predictedWaste = Array.isArray(parsed.predictedWaste)
+            ? parsed.predictedWaste
+            : (parsed.predictedWaste?.categories || []);
+            
+          if (predictedWaste.length > 0) {
+            setWasteCategories(predictedWaste.map(w => w.category));
           } else {
             setWasteCategories(allRules.map(r => r.category));
           }
@@ -66,6 +76,34 @@ export default function DisposalGuide() {
     setExpanded(prev => ({ ...prev, [category]: !prev[category] }));
   };
 
+  // Get state counts per category
+  const getCategoryStateCounts = useCallback((category) => {
+    const categoryProducts = products.filter(p => p.wasteCategory === category);
+    const counts = { generated: 0, disposed: 0, total: categoryProducts.length };
+    
+    categoryProducts.forEach(p => {
+      const key = getProductKey(p.name, 'local');
+      const state = getWasteState(key);
+      if (counts[state] !== undefined) counts[state]++;
+    });
+    
+    return counts;
+  }, [products, stateRefresh]);
+
+  // Batch mark all generated items as disposed
+  const markAllDisposed = useCallback((category) => {
+    const categoryProducts = products.filter(p => p.wasteCategory === category);
+    categoryProducts.forEach(p => {
+      const key = getProductKey(p.name, 'local');
+      const state = getWasteState(key);
+      if (state === WASTE_STATES.GENERATED) {
+        setWasteState(key, WASTE_STATES.DISPOSED);
+      }
+    });
+    setStateRefresh(prev => prev + 1);
+  }, [products]);
+
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -79,6 +117,12 @@ export default function DisposalGuide() {
     wasteCategories.length === 0 || wasteCategories.includes(r.category)
   );
 
+  // Overall new count
+  const totalNew = products.filter(p => {
+    const key = getProductKey(p.name, 'local');
+    return getWasteState(key) === WASTE_STATES.GENERATED;
+  }).length;
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -88,8 +132,32 @@ export default function DisposalGuide() {
           <span className="text-emerald-600 font-bold text-sm uppercase tracking-wider">Disposal Guide</span>
         </div>
         <h1 className="text-3xl font-black text-gray-900">How to Dispose</h1>
-        <p className="text-gray-400 mt-1 font-medium">Proper disposal methods for your predicted waste</p>
+        <p className="text-gray-400 mt-1 font-medium">Proper disposal methods for your predicted waste. (Disposed items won't show in active counts)</p>
       </div>
+
+      {/* Pending Banner */}
+      {totalNew > 0 && (
+        <div className="animate-fade-in-up bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-6 flex items-center gap-4">
+          <div className="p-3 bg-emerald-100 rounded-2xl">
+            <Check className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-black text-emerald-800">
+              {totalNew} item{totalNew !== 1 ? 's' : ''} to dispose!
+            </p>
+            <p className="text-sm text-emerald-600 font-medium mt-0.5">
+              Review instructions below and mark items as disposed when done.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/map')}
+            className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+          >
+            <MapPin className="w-4 h-4" />
+            Find Facility
+          </button>
+        </div>
+      )}
 
       {wasteCategories.length > 0 && wasteCategories.length < rules.length && (
         <div className="animate-fade-in bg-emerald-50 text-emerald-800 p-4 rounded-2xl mb-8 flex gap-3 border border-emerald-100">
@@ -104,6 +172,9 @@ export default function DisposalGuide() {
           const isExpanded = expanded[rule.category] !== false;
           const config = categoryConfig[rule.category] || categoryConfig['Other'];
           const Icon = config.icon;
+          const stateCounts = getCategoryStateCounts(rule.category);
+          const hasItems = stateCounts.total > 0;
+          const canClean = needsCleaning(rule.category);
 
           const borderColor = isSpecial 
             ? (rule.category === 'E-waste' ? 'border-orange-200 hover:border-orange-300' : 'border-red-200 hover:border-red-300')
@@ -120,11 +191,11 @@ export default function DisposalGuide() {
                   isExpanded ? 'border-b border-gray-100' : ''
                 }`}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                   <div className={`p-3 rounded-2xl ${isSpecial ? 'bg-red-50' : 'bg-emerald-50'} shadow-sm`}>
                     <span className="text-2xl">{config.emoji}</span>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h2 className="text-xl font-black text-gray-900">{rule.category}</h2>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {(rule.recyclable || rule.isRecyclable) ? (
@@ -140,6 +211,22 @@ export default function DisposalGuide() {
                         <ArrowRight className="w-3 h-3" /> {rule.disposalMethod || rule.method}
                       </span>
                     </div>
+
+                    {/* State counts per category */}
+                    {hasItems && (
+                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                        {stateCounts.generated > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            🗑️ {stateCounts.generated} new
+                          </span>
+                        )}
+                        {stateCounts.disposed > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-50 text-gray-400 border border-gray-200">
+                            🎉 {stateCounts.disposed} done
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className={`p-2 rounded-xl transition-colors ${isExpanded ? 'bg-gray-100 text-gray-600' : 'text-gray-300'}`}>
@@ -158,15 +245,40 @@ export default function DisposalGuide() {
 
                   <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-4">Instructions</h3>
                   <ol className="space-y-3 mb-6">
-                    {rule.instructions.map((inst, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-xs font-black mt-0.5">
-                          {i + 1}
-                        </span>
-                        <span className="text-gray-700 text-sm font-medium leading-relaxed">{inst}</span>
-                      </li>
-                    ))}
+                    {rule.instructions.map((inst, i) => {
+                      // Grey out cleaning instructions if all items are disposed
+                      const allCleaned = hasItems && stateCounts.generated === 0;
+                      const dimmed = allCleaned;
+                      
+                      return (
+                        <li key={i} className={`flex items-start gap-3 ${dimmed ? 'opacity-40' : ''}`}>
+                          <span className={`flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black mt-0.5 ${
+                            dimmed ? 'bg-gray-100 text-gray-400' : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {dimmed ? <Check className="w-3 h-3" /> : i + 1}
+                          </span>
+                          <span className="text-gray-700 text-sm font-medium leading-relaxed">
+                            {inst}
+                            {dimmed && <span className="text-emerald-600 ml-1 text-xs font-bold"> — Done!</span>}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ol>
+
+                  {/* Batch action buttons */}
+                  {hasItems && (
+                    <div className="flex flex-wrap gap-3 mb-6 pt-4 border-t border-gray-200">
+                      {stateCounts.generated > 0 && (
+                        <button
+                          onClick={() => markAllDisposed(rule.category)}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                        >
+                          🎉 Mark All Disposed ({stateCounts.generated})
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => navigate(`/map?category=${encodeURIComponent(rule.category)}`)}
