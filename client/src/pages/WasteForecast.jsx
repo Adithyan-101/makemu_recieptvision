@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock, Calendar, CalendarDays, BookOpen, AlertTriangle, TrendingUp, Zap } from 'lucide-react';
 import axios from 'axios';
+import WasteStateTracker from '../components/WasteStateTracker';
+import { getStateSummary, STATE_CONFIG, WASTE_STATES, STATE_ORDER } from '../utils/wasteState';
 
 const wasteChartColors = {
   'Plastic': '#3B82F6',
@@ -136,6 +138,23 @@ export default function WasteForecast() {
         <p className="text-gray-400 mt-1 font-medium">Based on your recent purchases</p>
       </div>
 
+      {/* Waste State Summary Bar */}
+      <div className="animate-fade-in-up grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8" style={{ animationDelay: '0.05s' }}>
+        {STATE_ORDER.map(state => {
+          const config = STATE_CONFIG[state];
+          const summary = getStateSummary();
+          return (
+            <div key={state} className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${config.bg} ${config.border}`}>
+              <span className="text-xl">{config.emoji}</span>
+              <div>
+                <p className={`text-lg font-black ${config.text}`}>{summary[state]}</p>
+                <p className="text-[11px] font-bold text-gray-500">{config.label}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="animate-fade-in-up bg-white p-6 rounded-3xl shadow-sm border border-gray-100" style={{ animationDelay: '0.1s' }}>
@@ -252,6 +271,16 @@ export default function WasteForecast() {
                             })}
                           </div>
                         )}
+
+                        {/* Compact Waste State Tracker */}
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <WasteStateTracker
+                            productName={item.name}
+                            wasteCategory={item.wasteCategory}
+                            scanId="local"
+                            compact={true}
+                          />
+                        </div>
                       </div>
                     )) : <p className="text-sm text-gray-300 italic p-2 font-medium">No items predicted for this timeframe.</p>}
                   </div>

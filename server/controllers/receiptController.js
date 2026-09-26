@@ -25,21 +25,8 @@ const analyzeReceipt = async (req, res, next) => {
         predictedWaste: demoWasteSummary
       };
     } else {
-      // Real image uploaded — try AI analysis, fall back to demo if it fails
-      try {
-        analysisResult = await aiService.extractAndAnalyze(req.file.buffer, req.file.mimetype);
-      } catch (aiError) {
-        console.warn('⚠️  AI analysis failed, falling back to demo data:', aiError.message);
-        const freshDemoProducts = demoProducts.map(p => ({
-          ...p,
-          ...calculateDates(p.shelfLifeDays || 0)
-        }));
-        analysisResult = {
-          extractedText: demoReceiptText,
-          products: freshDemoProducts,
-          predictedWaste: demoWasteSummary
-        };
-      }
+      // Real image uploaded — use AI analysis (no silent demo fallback)
+      analysisResult = await aiService.extractAndAnalyze(req.file.buffer, req.file.mimetype);
     }
 
     let savedScan;

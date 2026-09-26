@@ -61,10 +61,8 @@ CRITICAL RULES:
       const base64Image = imageBuffer.toString('base64');
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-      // Vision-capable models to try, in order of preference
       const modelsToTry = [
-        'llama-3.2-90b-vision-preview',
-        'llama-3.2-11b-vision-preview'
+        'qwen/qwen3.8-27b'
       ];
       let responseText = null;
       let lastError = null;

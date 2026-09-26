@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Scan, Recycle, Droplet, FileText, Wine, AlertTriangle, Info, ChevronRight, ArrowUpRight, TrendingUp, Leaf } from 'lucide-react';
 import axios from 'axios';
+import { getStateSummary, STATE_CONFIG, STATE_ORDER, WASTE_STATES } from '../utils/wasteState';
 
 const wasteChartColors = {
   'Plastic': '#3B82F6',
@@ -174,6 +175,36 @@ export default function Dashboard() {
               })}
             </div>
           </div>
+
+          {/* Waste State Progress */}
+          {getStateSummary().total > 0 && (
+            <div className="animate-fade-in-up bg-white rounded-3xl p-6 shadow-sm border border-gray-100" style={{ animationDelay: '0.15s' }}>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 bg-amber-50 rounded-xl">
+                  <Recycle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Waste Processing</h2>
+                  <p className="text-xs text-gray-400 font-medium">Track your waste through Pile Up → Clean → Ready</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {STATE_ORDER.map(state => {
+                  const config = STATE_CONFIG[state];
+                  const summary = getStateSummary();
+                  return (
+                    <div key={state} className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${config.bg} ${config.border}`}>
+                      <span className="text-2xl">{config.emoji}</span>
+                      <div>
+                        <p className={`text-xl font-black ${config.text}`}>{summary[state]}</p>
+                        <p className="text-[11px] font-bold text-gray-500">{config.label}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Waste Composition */}

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Package, BarChart3, BookOpen, MapPin, AlertTriangle, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
+import WasteStateTracker from '../components/WasteStateTracker';
+import { getStateSummary, STATE_CONFIG, WASTE_STATES } from '../utils/wasteState';
 
 const wasteConfig = {
   'Plastic': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500', emoji: '♻️' },
@@ -20,6 +22,11 @@ export default function ReceiptAnalysis() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stateRefresh, setStateRefresh] = useState(0);
+
+  const handleStateChange = useCallback(() => {
+    setStateRefresh(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,8 +88,10 @@ export default function ReceiptAnalysis() {
     ? data.predictedWaste 
     : (data?.predictedWaste?.categories || []);
   const scanDate = data?.createdAt || data?.date || new Date().toISOString();
+  const scanId = data?._id || id || 'local';
   const totalItems = products.length;
   const recyclableCount = products.filter(p => ['Plastic', 'Paper/Cardboard', 'Glass', 'Metal'].includes(p.wasteCategory)).length;
+  const stateSummary = getStateSummary();
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -97,7 +106,7 @@ export default function ReceiptAnalysis() {
       </div>
 
       {/* Stats Row */}
-      <div className="animate-fade-in-up grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8" style={{ animationDelay: '0.1s' }}>
+      <div className="animate-fade-in-up grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8" style={{ animationDelay: '0.1s' }}>
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <p className="text-3xl font-black text-gray-900">{totalItems}</p>
           <p className="text-sm text-gray-500 font-medium">Products Found</p>
@@ -106,9 +115,13 @@ export default function ReceiptAnalysis() {
           <p className="text-3xl font-black text-emerald-600">{recyclableCount}</p>
           <p className="text-sm text-gray-500 font-medium">Recyclable Items</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hidden sm:block">
-          <p className="text-3xl font-black text-gray-900">{predictedWaste.length}</p>
-          <p className="text-sm text-gray-500 font-medium">Waste Categories</p>
+        <div className="bg-white rounded-2xl p-5 border border-amber-100 shadow-sm">
+          <p className="text-3xl font-black text-amber-600">{stateSummary[WASTE_STATES.PILED_UP]}</p>
+          <p className="text-sm text-gray-500 font-medium">📦 Piled Up</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm">
+          <p className="text-3xl font-black text-emerald-600">{stateSummary[WASTE_STATES.READY]}</p>
+          <p className="text-sm text-gray-500 font-medium">✅ Ready</p>
         </div>
       </div>
 
@@ -129,7 +142,8 @@ export default function ReceiptAnalysis() {
             const config = wasteConfig[product.wasteCategory] || wasteConfig['Other'];
             const confidencePercent = Math.round(product.confidence * 100);
             return (
-              <div key={idx} className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+              <div key={idx} className="hover:bg-gray-50/50 transition-colors">
+                <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4 flex-1">
                   <span className="text-2xl">{config.emoji}</span>
                   <div className="w-full">
@@ -204,6 +218,17 @@ export default function ReceiptAnalysis() {
                     </div>
                     <span className="text-xs font-bold text-gray-500 w-9">{confidencePercent}%</span>
                   </div>
+                </div>
+                </div>
+
+                {/* Waste State Tracker */}
+                <div className="px-5 sm:px-6 pb-5">
+                  <WasteStateTracker
+                    productName={product.name}
+                    wasteCategory={product.wasteCategory}
+                    scanId={scanId}
+                    onStateChange={handleStateChange}
+                  />
                 </div>
               </div>
             );
