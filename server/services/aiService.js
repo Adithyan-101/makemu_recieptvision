@@ -62,7 +62,8 @@ CRITICAL RULES:
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
       const modelsToTry = [
-        'qwen/qwen3.8-27b'
+        'llama-3.2-90b-vision-preview',
+        'llama-3.2-11b-vision-preview'
       ];
       let responseText = null;
       let lastError = null;
@@ -85,7 +86,7 @@ CRITICAL RULES:
               ],
               model: modelName,
               temperature: 0.2,
-              max_tokens: 2048
+              max_tokens: 1000
             });
 
             responseText = chatCompletion.choices[0].message.content;
