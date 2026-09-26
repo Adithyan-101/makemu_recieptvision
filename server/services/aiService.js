@@ -56,8 +56,7 @@ CRITICAL RULES:
 2. Accurately predict packaging. Prioritize "Organic" for items with significant organic waste (like peels/shells).
 3. If no products are found, return [].
 4. Return ONLY valid JSON. No markdown backticks.
-5. YOU MUST MINIFY THE JSON (NO spaces, NO newlines) to save tokens.
-6. Extract a MAXIMUM of 10 items. If there are more, ignore the rest.`;
+5. YOU MUST MINIFY THE JSON (NO spaces, NO newlines) to save tokens.`;
 
       // Encode image as a base64 data URL for Groq vision
       const base64Image = imageBuffer.toString('base64');
