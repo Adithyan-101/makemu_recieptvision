@@ -12,6 +12,7 @@ const store = {
     userId: 'demo-user',
     ecoScore: 0,
     totalScans: 0,
+    itemStates: {},
     wasteCounts: {
       Plastic: 0,
       'Paper/Cardboard': 0,
@@ -114,5 +115,7 @@ module.exports = {
   getWasteRules,
   getWasteRuleByCategory,
   searchProducts,
-  matchProductName
+  matchProductName,
+  getWasteStates: () => store.profile.itemStates,
+  setWasteState: (key, state) => { store.profile.itemStates[key] = state; }
 };

@@ -13,6 +13,7 @@ import {
 import WasteStateTracker from '../components/WasteStateTracker';
 import { 
   getWasteState, 
+  setWasteState,
   getProductKey, 
   WASTE_STATES, 
   STATE_ORDER, 
@@ -48,23 +49,32 @@ export default function PendingTasks() {
     setUpdateTrigger(prev => prev + 1);
   };
 
+  useEffect(() => {
+    window.addEventListener('wasteStatesUpdated', handleStateChange);
+    return () => window.removeEventListener('wasteStatesUpdated', handleStateChange);
+  }, []);
+
   const tasksByState = useMemo(() => {
     const grouped = {
       [WASTE_STATES.GENERATED]: [],
+      [WASTE_STATES.DISPOSED]: [],
     };
 
     receipts.forEach(receipt => {
       const scanId = receipt._id || 'local';
-      (receipt.products || []).forEach(product => {
-        const key = getProductKey(product.name, scanId);
+      (receipt.products || []).forEach((product, index) => {
+        const key = getProductKey(product.name, scanId, index);
         const state = getWasteState(key);
         
-        // We exclude DISPOSED items completely from the pending tasks
-        if (state !== WASTE_STATES.DISPOSED && grouped[state]) {
+        if (grouped[state]) {
           grouped[state].push({
             ...product,
             scanId,
-            scanDate: receipt.createdAt
+            index,
+            scanDate: receipt.createdAt,
+            expiryDate: product.daysRemaining != null 
+              ? new Date(new Date(receipt.createdAt).getTime() + product.daysRemaining * 24 * 60 * 60 * 1000)
+              : null
           });
         }
       });
@@ -73,7 +83,7 @@ export default function PendingTasks() {
     return grouped;
   }, [receipts, updateTrigger]);
 
-  const totalPending = Object.values(tasksByState).reduce((acc, curr) => acc + curr.length, 0);
+  const totalPending = tasksByState[WASTE_STATES.GENERATED].length;
 
   if (loading) {
     return (
@@ -141,8 +151,8 @@ export default function PendingTasks() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  {items.map((item, idx) => (
-                    <div key={`${item.scanId}-${idx}`} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  {items.map((item) => (
+                    <div key={getProductKey(item.name, item.scanId, item.index)} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex flex-col sm:flex-row gap-4 justify-between">
                         <div>
                           <h3 className="font-bold text-gray-900 text-lg mb-1">{item.name}</h3>
@@ -155,8 +165,11 @@ export default function PendingTasks() {
                               {item.packaging || 'Unknown packaging'}
                             </span>
                             <span className="text-gray-300">•</span>
-                            <span className="text-gray-400 font-medium">
-                              Scanned {new Date(item.scanDate).toLocaleDateString()}
+                            <span className={`font-medium ${item.expiryDate ? (item.expiryDate < new Date() ? 'text-rose-500 font-bold' : 'text-emerald-600') : 'text-gray-400'}`}>
+                              {item.expiryDate 
+                                ? `Expires ${item.expiryDate.toLocaleDateString()}` 
+                                : `Scanned ${new Date(item.scanDate).toLocaleDateString()}`
+                              }
                             </span>
                           </div>
                         </div>
@@ -166,6 +179,7 @@ export default function PendingTasks() {
                             productName={item.name}
                             wasteCategory={item.wasteCategory}
                             scanId={item.scanId}
+                            index={item.index}
                             onStateChange={handleStateChange}
                           />
                         </div>
@@ -176,6 +190,36 @@ export default function PendingTasks() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Recently Completed / Undo Section */}
+      {tasksByState[WASTE_STATES.DISPOSED].length > 0 && (
+        <div className="mt-12 pt-8 border-t border-gray-200">
+          <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-emerald-500" />
+            Recently Completed
+          </h2>
+          <div className="space-y-3">
+            {tasksByState[WASTE_STATES.DISPOSED].slice(0, 5).map((item) => (
+              <div key={getProductKey(item.name, item.scanId, item.index)} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-4 text-gray-500">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <span className="font-bold line-through">{item.name}</span>
+                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded font-bold">{item.wasteCategory}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setWasteState(getProductKey(item.name, item.scanId, item.index), WASTE_STATES.GENERATED);
+                    handleStateChange();
+                  }}
+                  className="text-xs font-bold px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-emerald-300 hover:text-emerald-600 transition-colors"
+                >
+                  Undo
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

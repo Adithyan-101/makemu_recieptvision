@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Landing from './pages/Landing'
@@ -10,8 +11,13 @@ import NearbyMap from './pages/NearbyMap'
 import ScanHistory from './pages/ScanHistory'
 import Profile from './pages/Profile'
 import PendingTasks from './pages/PendingTasks'
+import { syncStatesFromBackend } from './utils/wasteState'
 
 function App() {
+  useEffect(() => {
+    syncStatesFromBackend();
+  }, []);
+
   return (
     <Router>
       <div className="min-h-screen bg-gray-50">

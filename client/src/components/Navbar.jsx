@@ -5,7 +5,22 @@ import { useState, useEffect } from 'react';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const location = useLocation();
+
+  useEffect(() => {
+    const updateCount = () => {
+      const states = JSON.parse(localStorage.getItem('wasteStates') || '{}');
+      let count = 0;
+      Object.values(states).forEach(s => {
+        if (s === 'generated') count++;
+      });
+      setPendingCount(count);
+    };
+    updateCount();
+    window.addEventListener('wasteStatesUpdated', updateCount);
+    return () => window.removeEventListener('wasteStatesUpdated', updateCount);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -68,6 +83,11 @@ export default function Navbar() {
                 >
                   <Icon className="w-4 h-4" />
                   {link.name}
+                  {link.name === 'Tasks' && pendingCount > 0 && (
+                    <span className="flex items-center justify-center w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full -ml-1">
+                      {pendingCount}
+                    </span>
+                  )}
                   {isActive(link.path) && (
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-emerald-500 rounded-full" />
                   )}
@@ -108,6 +128,11 @@ export default function Navbar() {
               >
                 <Icon className="w-5 h-5" />
                 {link.name}
+                {link.name === 'Tasks' && pendingCount > 0 && (
+                  <span className="ml-auto flex items-center justify-center px-2 py-0.5 bg-rose-500 text-white text-xs font-black rounded-full">
+                    {pendingCount} Pending
+                  </span>
+                )}
               </Link>
             );
           })}

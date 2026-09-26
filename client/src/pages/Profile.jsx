@@ -28,10 +28,23 @@ export default function Profile() {
     ? new Date(dashboardData.recentScans[dashboardData.recentScans.length - 1]?.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     : 'Just started';
 
-  const handleResetStates = () => {
-    localStorage.removeItem('wasteStates');
-    setStateSummary(getStateSummary());
-    setShowResetConfirm(false);
+  const handleResetStates = async () => {
+    try {
+      await axios.delete('/api/dashboard/reset');
+      localStorage.removeItem('wasteStates');
+      localStorage.removeItem('lastAnalysis');
+      
+      const res = await axios.get('/api/dashboard');
+      setDashboardData(res.data);
+      setStateSummary(getStateSummary(res.data.totalItems));
+      
+      // Dispatch event to clear Navbar badge
+      window.dispatchEvent(new Event('wasteStatesUpdated'));
+      
+      setShowResetConfirm(false);
+    } catch (err) {
+      console.error('Failed to reset account:', err);
+    }
   };
 
   // Eco score label

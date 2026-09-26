@@ -16,6 +16,7 @@ const receiptRoutes = require('./routes/receiptRoutes');
 const wasteRoutes = require('./routes/wasteRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const productRoutes = require('./routes/productRoutes');
+const stateRoutes = require('./routes/stateRoutes');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/receipts', receiptRoutes);
 app.use('/api/waste-rules', wasteRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/waste-states', stateRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

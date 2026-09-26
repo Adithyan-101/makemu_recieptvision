@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   WASTE_STATES,
   STATE_CONFIG,
@@ -16,9 +16,15 @@ import { ArrowRight, Check } from 'lucide-react';
  * WasteStateTracker — inline component for a single product card.
  * Shows the current state, a progress bar, and a button to advance to the next state.
  */
-export default function WasteStateTracker({ productName, wasteCategory, scanId, compact = false, onStateChange }) {
-  const productKey = getProductKey(productName, scanId);
+export default function WasteStateTracker({ productName, wasteCategory, scanId, index = 0, compact = false, onStateChange }) {
+  const productKey = getProductKey(productName, scanId, index);
   const [currentState, setCurrentState] = useState(() => getWasteState(productKey));
+
+  useEffect(() => {
+    const handleUpdate = () => setCurrentState(getWasteState(productKey));
+    window.addEventListener('wasteStatesUpdated', handleUpdate);
+    return () => window.removeEventListener('wasteStatesUpdated', handleUpdate);
+  }, [productKey]);
 
   const flowSteps = getFlowSteps(wasteCategory);
   const currentIdx = flowSteps.indexOf(currentState);

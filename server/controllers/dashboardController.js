@@ -53,6 +53,39 @@ const getDashboard = async (req, res, next) => {
   }
 };
 
+const resetAccount = async (req, res, next) => {
+  try {
+    const userId = 'demo-user';
+    
+    if (req.dbConnected) {
+      await UserWasteProfile.deleteOne({ userId });
+      await ReceiptScan.deleteMany({ userId });
+    } else {
+      memoryStore.store.scans = [];
+      memoryStore.store.profile = {
+        userId: 'demo-user',
+        ecoScore: 0,
+        totalScans: 0,
+        itemStates: {},
+        wasteCounts: {
+          Plastic: 0,
+          'Paper/Cardboard': 0,
+          Glass: 0,
+          Metal: 0,
+          Organic: 0,
+          'Battery/Special Waste': 0,
+          'E-waste': 0,
+          Other: 0
+        }
+      };
+    }
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-  getDashboard
+  getDashboard,
+  resetAccount
 };

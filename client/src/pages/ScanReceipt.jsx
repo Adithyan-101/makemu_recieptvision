@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Upload, Camera, Sparkles, AlertCircle, FileImage, X, Video, StopCircle } from 'lucide-react';
@@ -10,11 +10,25 @@ export default function ScanReceipt() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
+  const [hasScans, setHasScans] = useState(true); // default true to avoid flicker
   const fileInputRef = useRef(null);
+  const nativeCameraRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [cameraActive]);
+
+  useEffect(() => {
+    axios.get('/api/dashboard')
+      .then(res => setHasScans((res.data?.totalScans || 0) > 0))
+      .catch(() => setHasScans(false));
+  }, []);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -169,30 +183,34 @@ export default function ScanReceipt() {
           )}
 
           {/* Demo Button */}
-          <button
-            onClick={handleDemo}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-          >
-            {loading ? (
-              <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Sparkles className="w-6 h-6" />
-            )}
-            <span className="text-lg">Try Demo Receipt</span>
-          </button>
+          {!hasScans && (
+            <>
+              <button
+                onClick={handleDemo}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
+                {loading ? (
+                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-6 h-6" />
+                )}
+                <span className="text-lg">Try Demo Receipt</span>
+              </button>
 
-          {/* Divider */}
-          <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-4 bg-white text-xs font-bold text-gray-400 uppercase tracking-widest">
-                Or use your own
-              </span>
-            </div>
-          </div>
+              {/* Divider */}
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="px-4 bg-white text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Or use your own
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Camera View */}
           {cameraActive ? (
@@ -249,16 +267,30 @@ export default function ScanReceipt() {
                 />
               </div>
 
-              {/* Camera Button */}
-              {navigator.mediaDevices && (
-                <button 
-                  onClick={startCamera}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-200"
-                >
-                  <Video className="w-4 h-4" />
-                  Use Camera Instead
-                </button>
-              )}
+              {/* Camera Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                {navigator.mediaDevices && (
+                  <button 
+                    onClick={startCamera}
+                    className="hidden sm:flex flex-1 items-center justify-center gap-2 py-3 px-4 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-200"
+                  >
+                    <Video className="w-4 h-4" />
+                    Use Web Camera
+                  </button>
+                )}
+                
+                <label className="sm:hidden flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-200 cursor-pointer">
+                  <Camera className="w-4 h-4" />
+                  Take Photo
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileChange}
+                  />
+                </label>
+              </div>
             </>
           ) : (
             /* File Preview */

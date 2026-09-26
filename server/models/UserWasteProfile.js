@@ -13,6 +13,11 @@ const userWasteProfileSchema = new mongoose.Schema({
     'Battery/Special Waste': { type: Number, default: 0 },
     'E-waste': { type: Number, default: 0 },
     Other: { type: Number, default: 0 }
+  },
+  itemStates: {
+    type: Map,
+    of: String,
+    default: {}
   }
 }, { timestamps: true });
 

@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Package, BarChart3, BookOpen, MapPin, AlertTriangle, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
-import WasteStateTracker from '../components/WasteStateTracker';
+import { Package, BarChart3, BookOpen, MapPin, AlertTriangle, CheckCircle2, Sparkles, ArrowRight, ListTodo } from 'lucide-react';
 import { getStateSummary, STATE_CONFIG, WASTE_STATES } from '../utils/wasteState';
 
 const wasteConfig = {
@@ -141,6 +140,14 @@ export default function ReceiptAnalysis() {
           {products.map((product, idx) => {
             const config = wasteConfig[product.wasteCategory] || wasteConfig['Other'];
             const confidencePercent = Math.round(product.confidence * 100);
+            
+            let dynamicDaysRemaining = product.daysRemaining;
+            let dynamicExpiryDate = product.expiryDate;
+            if (product.daysRemaining !== undefined && scanDate) {
+              dynamicExpiryDate = new Date(new Date(scanDate).getTime() + product.daysRemaining * 24 * 60 * 60 * 1000);
+              const diffTime = dynamicExpiryDate.getTime() - new Date().getTime();
+              dynamicDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            }
             return (
               <div key={idx} className="hover:bg-gray-50/50 transition-colors">
                 <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -163,12 +170,12 @@ export default function ReceiptAnalysis() {
                       )}
                     </div>
                     
-                    {product.daysRemaining !== undefined && (
+                    {dynamicDaysRemaining !== undefined && (
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${product.daysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : product.daysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${dynamicDaysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : dynamicDaysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
                            {product.isEstimatedExpiry ? '~ ' : ''}
-                           {product.daysRemaining < 0 ? 'Expired' : product.daysRemaining === 0 ? 'Expires today' : `${product.daysRemaining} days left`}
-                           {product.expiryDate && ` (Expires: ${new Date(product.expiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
+                           {dynamicDaysRemaining < 0 ? 'Expired' : dynamicDaysRemaining === 0 ? 'Expires today' : `${dynamicDaysRemaining} days left`}
+                           {dynamicExpiryDate && ` (Expires: ${new Date(dynamicExpiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
                            {product.isEstimatedExpiry && ' (estimated)'}
                          </span>
                       </div>
@@ -221,14 +228,11 @@ export default function ReceiptAnalysis() {
                 </div>
                 </div>
 
-                {/* Waste State Tracker */}
                 <div className="px-5 sm:px-6 pb-5">
-                  <WasteStateTracker
-                    productName={product.name}
-                    wasteCategory={product.wasteCategory}
-                    scanId={scanId}
-                    onStateChange={handleStateChange}
-                  />
+                  <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2.5 rounded-xl text-sm font-bold border border-emerald-100">
+                    <ListTodo className="w-4 h-4" />
+                    Added to Pending Tasks
+                  </div>
                 </div>
               </div>
             );
@@ -278,14 +282,14 @@ export default function ReceiptAnalysis() {
           </button>
 
           <button
-            onClick={() => navigate('/disposal')}
+            onClick={() => navigate('/tasks')}
             className="group flex flex-col items-center p-7 bg-white border border-gray-100 rounded-3xl hover:border-blue-300 hover:shadow-lg transition-all duration-300"
           >
             <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-300">
-              <BookOpen className="w-8 h-8" />
+              <ListTodo className="w-8 h-8" />
             </div>
-            <span className="font-bold text-gray-900 mb-1">Disposal Guide</span>
-            <span className="text-xs text-gray-400 text-center">How to recycle correctly</span>
+            <span className="font-bold text-gray-900 mb-1">Pending Tasks</span>
+            <span className="text-xs text-gray-400 text-center">Manage your waste items</span>
             <ArrowRight className="w-4 h-4 text-gray-300 mt-3 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
           </button>
 

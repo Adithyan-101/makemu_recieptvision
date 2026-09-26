@@ -31,8 +31,8 @@ export default function ScanHistory() {
     const scanId = scan._id || 'local';
     const counts = { generated: 0, disposed: 0 };
     
-    prods.forEach(p => {
-      const key = getProductKey(p.name, scanId);
+    prods.forEach((p, index) => {
+      const key = getProductKey(p.name, scanId, index);
       const state = getWasteState(key);
       if (counts[state] !== undefined) counts[state]++;
     });

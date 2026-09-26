@@ -22,6 +22,7 @@ export default function DisposalGuide() {
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
+  const [scanId, setScanId] = useState('local');
   const [stateRefresh, setStateRefresh] = useState(0);
 
   useEffect(() => {
@@ -48,8 +49,9 @@ export default function DisposalGuide() {
         const localData = localStorage.getItem('lastAnalysis');
         if (localData) {
           const parsed = JSON.parse(localData);
-          const prods = parsed.products || [];
+          const prods = (parsed.products || []).map((p, idx) => ({ ...p, index: idx }));
           setProducts(prods);
+          setScanId(parsed._id || 'local');
           
           const predictedWaste = Array.isArray(parsed.predictedWaste)
             ? parsed.predictedWaste
@@ -82,7 +84,7 @@ export default function DisposalGuide() {
     const counts = { generated: 0, disposed: 0, total: categoryProducts.length };
     
     categoryProducts.forEach(p => {
-      const key = getProductKey(p.name, 'local');
+      const key = getProductKey(p.name, scanId, p.index);
       const state = getWasteState(key);
       if (counts[state] !== undefined) counts[state]++;
     });
@@ -94,7 +96,7 @@ export default function DisposalGuide() {
   const markAllDisposed = useCallback((category) => {
     const categoryProducts = products.filter(p => p.wasteCategory === category);
     categoryProducts.forEach(p => {
-      const key = getProductKey(p.name, 'local');
+      const key = getProductKey(p.name, scanId, p.index);
       const state = getWasteState(key);
       if (state === WASTE_STATES.GENERATED) {
         setWasteState(key, WASTE_STATES.DISPOSED);
@@ -119,7 +121,7 @@ export default function DisposalGuide() {
 
   // Overall new count
   const totalNew = products.filter(p => {
-    const key = getProductKey(p.name, 'local');
+    const key = getProductKey(p.name, scanId);
     return getWasteState(key) === WASTE_STATES.GENERATED;
   }).length;
 

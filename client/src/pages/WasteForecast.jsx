@@ -41,21 +41,27 @@ export default function WasteForecast() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        try {
-          const res = await axios.get('/api/dashboard');
-          if (res.data?.lastAnalysis) {
-             setData(res.data.lastAnalysis);
-             setLoading(false);
-             return;
-          }
-        } catch (e) {
-          // Ignore API error for forecast if we have local data
-        }
+        const res = await axios.get('/api/receipts');
+        const receipts = res.data || [];
         
-        const localData = localStorage.getItem('lastAnalysis');
-        if (localData) {
-          setData(JSON.parse(localData));
-        }
+        let allProducts = [];
+        let categoryCounts = {};
+        
+        receipts.forEach(receipt => {
+          const scanId = receipt._id || 'local';
+          (receipt.products || []).forEach((product, index) => {
+            const key = getProductKey(product.name, scanId, index);
+            if (getWasteState(key) !== WASTE_STATES.DISPOSED) {
+              const p = { ...product, scanId, index, scanDate: receipt.createdAt };
+              allProducts.push(p);
+              categoryCounts[p.wasteCategory] = (categoryCounts[p.wasteCategory] || 0) + 1;
+            }
+          });
+        });
+        
+        const predictedWaste = Object.entries(categoryCounts).map(([category, count]) => ({ category, count }));
+        
+        setData({ products: allProducts, predictedWaste });
       } catch (err) {
         console.error(err);
       } finally {
@@ -98,15 +104,28 @@ export default function WasteForecast() {
 
   let timeline = { today: [], week: [], later: [] };
   
-  const hasExpiryData = products.some(p => p.daysRemaining !== undefined || p.wasteStreams?.length > 0);
+  const now = new Date();
+  
+  // Calculate dynamic days remaining for each product
+  const productsWithDynamicDays = products.map(p => {
+    let dynamicDaysRemaining = undefined;
+    if (p.daysRemaining !== undefined && p.scanDate) {
+      const expiryDate = new Date(new Date(p.scanDate).getTime() + p.daysRemaining * 24 * 60 * 60 * 1000);
+      const diffTime = expiryDate.getTime() - now.getTime();
+      dynamicDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+    return { ...p, dynamicDaysRemaining };
+  });
+
+  const hasExpiryData = productsWithDynamicDays.some(p => p.dynamicDaysRemaining !== undefined || p.wasteStreams?.length > 0);
   
   if (hasExpiryData) {
-    timeline.today = products.filter(p => (p.daysRemaining !== undefined && p.daysRemaining <= 0) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'immediate')));
-    timeline.week = products.filter(p => (p.daysRemaining !== undefined && p.daysRemaining > 0 && p.daysRemaining <= 7) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'on_consumption')));
-    timeline.later = products.filter(p => (p.daysRemaining !== undefined && p.daysRemaining > 7) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'on_expiry')));
+    timeline.today = productsWithDynamicDays.filter(p => (p.dynamicDaysRemaining !== undefined && p.dynamicDaysRemaining <= 0) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'immediate')));
+    timeline.week = productsWithDynamicDays.filter(p => (p.dynamicDaysRemaining !== undefined && p.dynamicDaysRemaining > 0 && p.dynamicDaysRemaining <= 7) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'on_consumption')));
+    timeline.later = productsWithDynamicDays.filter(p => (p.dynamicDaysRemaining !== undefined && p.dynamicDaysRemaining > 7) || (p.wasteStreams && p.wasteStreams.some(s => s.timing === 'on_expiry')));
   } else {
     // Fallback logic
-    timeline.today = products.filter(p => p.wasteCategory === 'Organic' || (p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh'));
+    timeline.today = productsWithDynamicDays.filter(p => p.wasteCategory === 'Organic' || (p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh'));
     timeline.week = products.filter(p => p.wasteCategory === 'Plastic' || p.wasteCategory === 'Metal' || p.wasteCategory === 'Glass').filter(p => !((p.name || '').toLowerCase().includes('milk') || (p.name || '').toLowerCase().includes('fresh')));
     timeline.later = products.filter(p => p.wasteCategory === 'Paper/Cardboard' || p.wasteCategory === 'Battery/Special Waste' || p.wasteCategory === 'E-waste' || p.wasteCategory === 'Other');
   }
@@ -134,8 +153,8 @@ export default function WasteForecast() {
           <TrendingUp className="w-5 h-5 text-emerald-500" />
           <span className="text-emerald-600 font-bold text-sm uppercase tracking-wider">Waste Forecast</span>
         </div>
-        <h1 className="text-3xl font-black text-gray-900">This Week's Predicted Waste</h1>
-        <p className="text-gray-400 mt-1 font-medium">Based on your recent purchases</p>
+        <h1 className="text-3xl font-black text-gray-900">Upcoming Predicted Waste</h1>
+        <p className="text-gray-400 mt-1 font-medium">Timeline based on all your pending items across all receipts</p>
       </div>
 
       {/* Waste State Summary Bar */}
@@ -248,10 +267,10 @@ export default function WasteForecast() {
                           </div>
                         </div>
 
-                        {item.daysRemaining !== undefined && (
+                        {item.dynamicDaysRemaining !== undefined && (
                            <div className="mt-1">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.daysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : item.daysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                                {item.daysRemaining < 0 ? 'Expired' : item.daysRemaining === 0 ? 'Expires today' : `${item.daysRemaining} days left`}
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.dynamicDaysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : item.dynamicDaysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                                {item.dynamicDaysRemaining < 0 ? 'Expired' : item.dynamicDaysRemaining === 0 ? 'Expires today' : `${item.dynamicDaysRemaining} days left`}
                               </span>
                            </div>
                         )}

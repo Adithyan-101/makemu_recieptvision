@@ -6,6 +6,7 @@
  * States are stored per-product in localStorage keyed by a unique product identifier.
  * This keeps things simple without requiring backend changes.
  */
+import axios from 'axios';
 
 const STORAGE_KEY = 'wasteStates';
 
@@ -46,8 +47,8 @@ export const STATE_ORDER = [
  * Generate a stable key for a product based on its name + scan context.
  * scanId can be a receipt ID or timestamp-based ID from localStorage.
  */
-export function getProductKey(productName, scanId) {
-  return `${scanId || 'local'}::${productName}`;
+export function getProductKey(productName, scanId, index = 0) {
+  return `${scanId || 'local'}::${productName}::${index}`;
 }
 
 /** Load all waste states from localStorage */
@@ -63,6 +64,7 @@ function loadStates() {
 /** Save all waste states to localStorage */
 function saveStates(states) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+  window.dispatchEvent(new Event('wasteStatesUpdated'));
 }
 
 /** Get the current state for a product */
@@ -76,6 +78,21 @@ export function setWasteState(productKey, newState) {
   const states = loadStates();
   states[productKey] = newState;
   saveStates(states);
+  // Async sync to backend
+  axios.post('/api/waste-states', { key: productKey, state: newState }).catch(console.error);
+}
+
+/** Pull states from backend and merge/overwrite local storage */
+export async function syncStatesFromBackend() {
+  try {
+    const { data } = await axios.get('/api/waste-states');
+    if (data && typeof data === 'object') {
+      const local = loadStates();
+      saveStates({ ...local, ...data });
+    }
+  } catch (err) {
+    console.error('Failed to sync states from backend', err);
+  }
 }
 
 /** Get the next state in the flow */
