@@ -62,8 +62,7 @@ CRITICAL RULES:
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
       const modelsToTry = [
-        'llama-3.2-90b-vision-preview',
-        'llama-3.2-11b-vision-preview'
+        'qwen/qwen3.8-27b'
       ];
       let responseText = null;
       let lastError = null;
