@@ -53,9 +53,11 @@ Example format:
 
 CRITICAL RULES:
 1. Do not include prices or tax. Just the full product name.
-2. Accurately predict the packaging (e.g. "Glass Jar", "Cardboard Box"). If the item itself leaves significant organic waste (like eggshells, fruit peels, or vegetable scraps), prioritize "Organic" as the wasteCategory. Otherwise, categorize by its packaging.
+2. Accurately predict packaging. Prioritize "Organic" for items with significant organic waste (like peels/shells).
 3. If no products are found, return [].
-4. Return ONLY valid JSON. No markdown backticks.`;
+4. Return ONLY valid JSON. No markdown backticks.
+5. YOU MUST MINIFY THE JSON (NO spaces, NO newlines) to save tokens.
+6. Extract a MAXIMUM of 10 items. If there are more, ignore the rest.`;
 
       // Encode image as a base64 data URL for Groq vision
       const base64Image = imageBuffer.toString('base64');
@@ -112,6 +114,16 @@ CRITICAL RULES:
 
       // Clean up markdown code blocks if any
       let text = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      // Auto-repair truncated JSON arrays if the token limit cut it off
+      if (!text.endsWith(']')) {
+        const lastBrace = text.lastIndexOf('}');
+        if (lastBrace !== -1) {
+          text = text.substring(0, lastBrace + 1) + ']';
+        } else {
+          text = '[]';
+        }
+      }
 
       let products = [];
       try {
