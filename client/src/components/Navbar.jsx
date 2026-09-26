@@ -1,77 +1,117 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { Leaf, Menu, X, Scan, LayoutDashboard, Map, History, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
   const links = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Scan', path: '/scan' },
-    { name: 'Map', path: '/map' },
-    { name: 'History', path: '/history' },
-    { name: 'Profile', path: '/profile' },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Scan', path: '/scan', icon: Scan },
+    { name: 'Map', path: '/map', icon: Map },
+    { name: 'History', path: '/history', icon: History },
+    { name: 'Profile', path: '/profile', icon: User },
   ];
 
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+    <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+      scrolled 
+        ? 'glass shadow-lg' 
+        : 'bg-white/80 backdrop-blur-sm border-b border-gray-100'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
+          {/* Logo */}
           <div className="flex items-center">
-            <Link to="/" className="flex flex-shrink-0 items-center">
-              <Leaf className="h-8 w-8 text-emerald-500" />
-              <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:block">ReceiptVision</span>
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="relative">
+                <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                  <Leaf className="h-5 w-5 text-white" />
+                </div>
+                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-cyan-400 rounded-full border-2 border-white animate-pulse" />
+              </div>
+              <span className="text-lg font-extrabold text-gray-900 tracking-tight hidden sm:block">
+                Receipt<span className="text-gradient">Vision</span>
+              </span>
             </Link>
           </div>
           
-          <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-8">
-            {links.map((link) => (
-              <Link
-                key={link.name}
-                to={link.path}
-                className={`${
-                  location.pathname === link.path
-                    ? 'border-emerald-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}
-              >
-                {link.name}
-              </Link>
-            ))}
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-1">
+            {links.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.name}
+                  to={link.path}
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    isActive(link.path)
+                      ? 'text-emerald-700 bg-emerald-50'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {link.name}
+                  {isActive(link.path) && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-emerald-500 rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
 
-          <div className="flex items-center sm:hidden">
+          {/* Mobile Toggle */}
+          <div className="flex items-center md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500"
+              className="p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              aria-label="Toggle menu"
             >
-              {isOpen ? <X className="block h-6 w-6" /> : <Menu className="block h-6 w-6" />}
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
       </div>
 
-      {isOpen && (
-        <div className="sm:hidden bg-white border-b border-gray-200">
-          <div className="pt-2 pb-3 space-y-1">
-            {links.map((link) => (
+      {/* Mobile Menu */}
+      <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+        isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+      }`}>
+        <div className="px-4 pb-4 pt-2 space-y-1 bg-white/95 backdrop-blur-xl border-t border-gray-100">
+          {links.map((link) => {
+            const Icon = link.icon;
+            return (
               <Link
                 key={link.name}
                 to={link.path}
-                onClick={() => setIsOpen(false)}
-                className={`${
-                  location.pathname === link.path
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                    : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'
-                } block pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  isActive(link.path)
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
               >
+                <Icon className="w-5 h-5" />
                 {link.name}
               </Link>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
     </nav>
   );
 }

@@ -17,9 +17,23 @@ const productRoutes = require('./routes/productRoutes');
 
 const app = express();
 
-// Connect to MongoDB and seed data
-connectDB().then(async () => {
-  await seedData();
+// Track whether MongoDB is connected
+let dbConnected = false;
+
+// Connect to MongoDB and seed data (non-blocking)
+(async () => {
+  dbConnected = await connectDB();
+  if (dbConnected) {
+    await seedData();
+  } else {
+    console.log('📋 Using in-memory data store for demo mode');
+  }
+})();
+
+// Make DB status available to routes
+app.use((req, res, next) => {
+  req.dbConnected = dbConnected;
+  next();
 });
 
 // Middleware
@@ -51,5 +65,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
