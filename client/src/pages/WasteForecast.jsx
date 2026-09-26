@@ -88,7 +88,9 @@ export default function WasteForecast() {
   }
 
   const products = data?.products || [];
-  const predictedWaste = data?.predictedWaste || [];
+  const predictedWaste = Array.isArray(data?.predictedWaste) 
+    ? data.predictedWaste 
+    : (data?.predictedWaste?.categories || []);
   const pieData = predictedWaste.map(({ category, count }) => ({ name: category, value: count }));
   const barData = predictedWaste.map(({ category, count }) => ({ name: category, value: count }));
 

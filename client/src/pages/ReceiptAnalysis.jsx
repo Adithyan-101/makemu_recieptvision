@@ -77,7 +77,9 @@ export default function ReceiptAnalysis() {
   }
 
   const products = data?.products || [];
-  const predictedWaste = data?.predictedWaste || [];
+  const predictedWaste = Array.isArray(data?.predictedWaste) 
+    ? data.predictedWaste 
+    : (data?.predictedWaste?.categories || []);
   const scanDate = data?.createdAt || data?.date || new Date().toISOString();
   const totalItems = products.length;
   const recyclableCount = products.filter(p => ['Plastic', 'Paper/Cardboard', 'Glass', 'Metal'].includes(p.wasteCategory)).length;
