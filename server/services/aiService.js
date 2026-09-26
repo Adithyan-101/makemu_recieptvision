@@ -63,9 +63,8 @@ CRITICAL RULES:
 
       // Vision-capable models to try, in order of preference
       const modelsToTry = [
-        'llama-4-scout-17b-16e-instruct',
-        'qwen-2.5-vl-72b',
-        'llama-4-maverick-17b-128e-instruct'
+        'llama-3.2-90b-vision-preview',
+        'llama-3.2-11b-vision-preview'
       ];
       let responseText = null;
       let lastError = null;
