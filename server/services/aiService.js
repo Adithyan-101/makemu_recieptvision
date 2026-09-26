@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const { matchProducts } = require('./productMatcher');
 const { demoReceiptText, demoProducts, demoWasteSummary } = require('./demoData');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
@@ -6,19 +6,19 @@ require('dotenv').config();
 
 class AIService {
   constructor() {
-    const apiKey = process.env.AI_API_KEY;
-    // Initialize AI client if a real API key is provided (not a placeholder)
-    if (apiKey && apiKey !== 'your-gemini-api-key' && apiKey.length > 10) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-      console.log('🤖 Gemini AI initialized for receipt OCR');
+    const apiKey = process.env.GROQ_API_KEY;
+    // Initialize Groq client if a real API key is provided (not a placeholder)
+    if (apiKey && apiKey !== 'your-groq-api-key' && apiKey.length > 10) {
+      this.groq = new Groq({ apiKey });
+      console.log('🤖 Groq AI initialized for receipt OCR');
     } else {
-      console.log('ℹ️  No Gemini API key configured — real receipt scanning will fall back to demo data');
+      console.log('ℹ️  No Groq API key configured — real receipt scanning will fall back to demo data');
     }
   }
 
   async extractAndAnalyze(imageBuffer, mimeType) {
-    if (!this.genAI) {
-      throw new Error('No AI API key configured. Add AI_API_KEY to your .env file to enable real receipt scanning.');
+    if (!this.groq) {
+      throw new Error('No AI API key configured. Add GROQ_API_KEY to your .env file to enable real receipt scanning.');
     }
 
     try {
@@ -42,58 +42,69 @@ CRITICAL RULES:
 3. If no products are found, return [].
 4. Return ONLY valid JSON. No markdown backticks.`;
 
-      const imageParts = [
-        {
-          inlineData: {
-            data: imageBuffer.toString("base64"),
-            mimeType
-          }
-        }
-      ];
+      // Encode image as a base64 data URL for Groq vision
+      const base64Image = imageBuffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-      // Retry logic for 503 High Demand errors
+      // Vision-capable models to try, in order of preference
       const modelsToTry = [
-        'gemini-flash-latest', 
-        'gemini-3.5-flash',
-        'gemini-3.8-flash',
-        'gemini-pro-latest'
+        'llama-4-scout-17b-16e-instruct',
+        'qwen-2.5-vl-72b',
+        'llama-4-maverick-17b-128e-instruct'
       ];
-      let result = null;
+      let responseText = null;
       let lastError = null;
 
       for (const modelName of modelsToTry) {
         for (let attempt = 1; attempt <= 2; attempt++) {
           try {
-            const model = this.genAI.getGenerativeModel({ model: modelName });
-            result = await model.generateContent([prompt, ...imageParts]);
-            break; // Success! Break out of the retry loop
+            const chatCompletion = await this.groq.chat.completions.create({
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: prompt },
+                    {
+                      type: 'image_url',
+                      image_url: { url: dataUrl }
+                    }
+                  ]
+                }
+              ],
+              model: modelName,
+              temperature: 0.2,
+              max_tokens: 2048
+            });
+
+            responseText = chatCompletion.choices[0].message.content;
+            break; // Success
           } catch (err) {
             lastError = err;
-            if (err.message && err.message.includes('503')) {
-              console.log(`⚠️ ${modelName} attempt ${attempt} failed with 503 High Demand. Retrying in ${attempt}s...`);
+            const status = err.status || err.statusCode || '';
+            if (String(status) === '503' || String(status) === '429' || (err.message && (err.message.includes('503') || err.message.includes('rate')))) {
+              console.log(`⚠️ ${modelName} attempt ${attempt} failed (${status}). Retrying in ${attempt}s...`);
               await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             } else {
-              throw err; // Throw non-503 errors immediately
+              // Non-retryable error for this model — try the next model
+              console.log(`⚠️ ${modelName} failed: ${err.message}. Trying next model...`);
+              break;
             }
           }
         }
-        if (result) break; // Success! Break out of model fallback loop
+        if (responseText) break; // Success — stop trying models
       }
 
-      if (!result) {
+      if (!responseText) {
         throw lastError; // All retries and models failed
       }
 
-      const response = await result.response;
-      let text = response.text();
-      
       // Clean up markdown code blocks if any
-      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      
+      let text = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+
       let products = [];
       try {
         products = JSON.parse(text);
-        // Add a fake confidence score for the UI
+        // Add a confidence score for the UI
         products = products.map(p => ({
           ...p,
           confidence: Math.round((0.85 + Math.random() * 0.14) * 100) / 100

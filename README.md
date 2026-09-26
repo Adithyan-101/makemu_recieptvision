@@ -26,7 +26,7 @@ Edit `.env` with your values:
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/receiptvision
 GOOGLE_MAPS_API_KEY=your-key
 VITE_GOOGLE_MAPS_API_KEY=your-key
-AI_API_KEY=your-gemini-api-key
+GROQ_API_KEY=your-groq-api-key
 DEMO_MODE=true
 PORT=5000
 ```
@@ -58,7 +58,7 @@ RECEIPT → OCR/AI → PRODUCT IDENTIFICATION → PACKAGING INFERENCE → WASTE 
 - **Frontend:** React, Vite, Tailwind CSS, Recharts, Lucide Icons
 - **Backend:** Node.js, Express, Mongoose
 - **Database:** MongoDB Atlas
-- **AI/OCR:** Google Gemini API (swappable)
+- **AI/OCR:** Groq API (Llama 4 Scout / Qwen 2.5 VL vision models)
 - **Maps:** Google Maps JavaScript API + Places API (New)
 
 ## 📁 Project Structure
