@@ -268,6 +268,41 @@ export default function DisposalGuide() {
                     })}
                   </ol>
 
+                  {/* Organic Upcycling Tips */}
+                  {rule.category === 'Organic' && (
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-lg">🌱</span>
+                        <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Instead of Binning — Upcycle It!</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                          { emoji: '🥚', title: 'Eggshells', tip: 'Crush and sprinkle around flower pots — slow-release calcium fertilizer and deters slugs.' },
+                          { emoji: '🍌', title: 'Banana Peels', tip: 'Soak in water for 48h to make potassium-rich liquid fertilizer. Or bury directly near roses.' },
+                          { emoji: '☕', title: 'Coffee Grounds', tip: 'Mix into soil for acid-loving plants like blueberries & ferns. Also a great slug repellent.' },
+                          { emoji: '🧅', title: 'Onion & Garlic Skins', tip: 'Boil in water, cool, and use to water plants — rich in potassium and antifungal properties.' },
+                          { emoji: '🍊', title: 'Citrus Peels', tip: 'Place near anthills as a natural repellent. Blend with vinegar for a DIY all-purpose cleaner.' },
+                          { emoji: '🥕', title: 'Vegetable Peels & Tops', tip: 'Boil into a flavourful vegetable stock. Carrot tops, onion skins, and celery ends all work well.' },
+                          { emoji: '🦴', title: 'Cooked Bones', tip: 'Give to dogs as a treat (avoid chicken bones). Or bake and crush into bone meal for garden fertilizer.' },
+                          { emoji: '🍵', title: 'Used Tea Bags/Leaves', tip: 'Empty loose leaves around plants — they deter pests and improve soil drainage naturally.' },
+                          { emoji: '🌽', title: 'Corn Husks & Cobs', tip: 'Soak cobs in water for a natural scrubber. Husks can be composted or used as garden mulch.' },
+                          { emoji: '🍞', title: 'Stale Bread', tip: 'Break into pieces for garden birds. Avoid composting large amounts as it attracts rats.' },
+                        ].map(({ emoji, title, tip }) => (
+                          <div key={title} className="flex gap-3 p-3.5 bg-white rounded-2xl border border-green-100 hover:border-green-300 transition-colors shadow-sm">
+                            <span className="text-2xl flex-shrink-0">{emoji}</span>
+                            <div>
+                              <p className="font-bold text-gray-900 text-sm">{title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{tip}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 font-medium mt-3 flex items-center gap-1.5">
+                        <span>💡</span> Any organic waste not upcycled should go into your green compost bin.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Batch action buttons */}
                   {hasItems && (
                     <div className="flex flex-wrap gap-3 mb-6 pt-4 border-t border-gray-200">
