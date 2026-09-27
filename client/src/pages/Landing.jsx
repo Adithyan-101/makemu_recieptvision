@@ -49,7 +49,7 @@ export default function Landing() {
     {
       icon: Sparkles,
       title: 'AI-Powered Analysis',
-      description: 'Uses Google Gemini to read and understand receipt contents automatically.',
+      description: 'Uses Groq AI to read and understand receipt contents automatically.',
       color: 'text-violet-600',
       bg: 'bg-violet-50'
     },
