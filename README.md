@@ -88,9 +88,9 @@ For Hardware:
 [Live Demo: https://receiptvision.onrender.com](https://receiptvision.onrender.com)
 
 ## Team Contributions
-- [Name 1]: [Specific contributions - e.g., Frontend development, UI/UX, Maps integration]
-- [Name 2]: [Specific contributions - e.g., Backend API, Groq AI OCR integration, Database]
-- [Name 3]: [Specific contributions - e.g., Deployment, Project Management, Presentation]
+- **Team Lead ([Name])**: Project Management, UI/UX Design, Ideation, Presentation Preparation, and Demo Video Creation.
+- **Member 2 ([Name])**: Core Full-Stack Development (React & Express), Groq AI OCR Integration, Google Maps API Setup, and Application Logic.
+- **Member 3 ([Name])**: Deployment (Render.com), Database Configuration (MongoDB), Quality Assurance/Testing, and Project Documentation.
 
 ---
 Made with ❤️ at MuLearn MakeMu
