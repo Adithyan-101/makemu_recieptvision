@@ -60,27 +60,70 @@ export default function PendingTasks() {
       [WASTE_STATES.DISPOSED]: [],
     };
 
+    const timingLabels = {
+      immediate:      { label: 'Dispose now',       icon: '🔵' },
+      on_consumption: { label: 'When consumed',     icon: '🟡' },
+      on_expiry:      { label: 'If expired/spoiled', icon: '🔴' },
+    };
+
     receipts.forEach(receipt => {
       const scanId = receipt._id || 'local';
       (receipt.products || []).forEach((product, index) => {
-        const key = getProductKey(product.name, scanId, index);
-        const state = getWasteState(key);
-        
-        if (grouped[state]) {
-          grouped[state].push({
-            ...product,
-            scanId,
-            index,
-            scanDate: receipt.createdAt,
-            expiryDate: product.daysRemaining != null 
-              ? new Date(new Date(receipt.createdAt).getTime() + product.daysRemaining * 24 * 60 * 60 * 1000)
-              : null
+        const expiryDate = product.daysRemaining != null
+          ? new Date(new Date(receipt.createdAt || Date.now()).getTime() + product.daysRemaining * 24 * 60 * 60 * 1000)
+          : null;
+
+        if (product.wasteStreams && product.wasteStreams.length > 0) {
+          // One task per waste stream
+          product.wasteStreams.forEach((stream, streamIdx) => {
+            const key = getProductKey(`${product.name}::${stream.type}`, scanId, index * 100 + streamIdx);
+            const state = getWasteState(key);
+            if (grouped[state]) {
+              grouped[state].push({
+                // Stream-specific fields
+                name: product.name,
+                streamType: stream.type,
+                wasteCategory: stream.wasteCategory,
+                timing: stream.timing,
+                timingLabel: timingLabels[stream.timing] || { label: stream.timing, icon: '⚪' },
+                // Product-level fields
+                packaging: product.packaging,
+                storageCondition: product.storageCondition,
+                daysRemaining: product.daysRemaining,
+                expiryDate,
+                scanId,
+                index: index * 100 + streamIdx,
+                scanDate: receipt.createdAt,
+                _key: key,
+              });
+            }
           });
+        } else {
+          // Fallback: product has no streams — treat whole product as one task
+          const key = getProductKey(product.name, scanId, index);
+          const state = getWasteState(key);
+          if (grouped[state]) {
+            grouped[state].push({
+              name: product.name,
+              streamType: null,
+              wasteCategory: product.wasteCategory,
+              timing: null,
+              timingLabel: null,
+              packaging: product.packaging,
+              storageCondition: product.storageCondition,
+              daysRemaining: product.daysRemaining,
+              expiryDate,
+              scanId,
+              index,
+              scanDate: receipt.createdAt,
+              _key: key,
+            });
+          }
         }
       });
     });
 
-    // Sort each group: nearest expiry (or already expired) first, no-expiry items last
+    // Sort each group: expired/soonest first, no-expiry last
     Object.keys(grouped).forEach(state => {
       grouped[state].sort((a, b) => {
         const aDays = a.daysRemaining != null ? a.daysRemaining : Infinity;
@@ -161,10 +204,20 @@ export default function PendingTasks() {
 
                 <div className="grid grid-cols-1 gap-4">
                   {items.map((item) => (
-                    <div key={getProductKey(item.name, item.scanId, item.index)} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={item._key} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex flex-col sm:flex-row gap-4 justify-between">
                         <div>
-                          <h3 className="font-bold text-gray-900 text-lg mb-1">{item.name}</h3>
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <h3 className="font-bold text-gray-900 text-lg">{item.name}</h3>
+                            {item.timingLabel && (
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                {item.timingLabel.icon} {item.timingLabel.label}
+                              </span>
+                            )}
+                          </div>
+                          {item.streamType && (
+                            <p className="text-sm font-semibold text-emerald-700 mb-1">↳ {item.streamType}</p>
+                          )}
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-lg font-bold">
                               {item.wasteCategory}
@@ -185,7 +238,7 @@ export default function PendingTasks() {
                         
                         <div className="flex-shrink-0 sm:w-64 border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-5">
                           <WasteStateTracker
-                            productName={item.name}
+                            productName={`${item.name}::${item.streamType || ''}`}
                             wasteCategory={item.wasteCategory}
                             scanId={item.scanId}
                             index={item.index}
@@ -211,15 +264,18 @@ export default function PendingTasks() {
           </h2>
           <div className="space-y-3">
             {tasksByState[WASTE_STATES.DISPOSED].slice(0, 5).map((item) => (
-              <div key={getProductKey(item.name, item.scanId, item.index)} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <div key={item._key} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
                 <div className="flex items-center gap-4 text-gray-500">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <span className="font-bold line-through">{item.name}</span>
+                  <div>
+                    <span className="font-bold line-through">{item.name}</span>
+                    {item.streamType && <span className="text-xs text-gray-400 ml-1">↳ {item.streamType}</span>}
+                  </div>
                   <span className="text-xs bg-gray-200 px-2 py-0.5 rounded font-bold">{item.wasteCategory}</span>
                 </div>
                 <button
                   onClick={() => {
-                    setWasteState(getProductKey(item.name, item.scanId, item.index), WASTE_STATES.GENERATED);
+                    setWasteState(item._key, WASTE_STATES.GENERATED);
                     handleStateChange();
                   }}
                   className="text-xs font-bold px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-emerald-300 hover:text-emerald-600 transition-colors"
