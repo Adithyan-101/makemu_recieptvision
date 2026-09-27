@@ -88,9 +88,8 @@ For Hardware:
 [Live Demo: https://receiptvision.onrender.com](https://receiptvision.onrender.com)
 
 ## Team Contributions
-- **Team Lead ([Name])**: Project Management, UI/UX Design, Ideation, Presentation Preparation, and Demo Video Creation.
-- **Member 2 ([Name])**: Core Full-Stack Development (React & Express), Groq AI OCR Integration, Google Maps API Setup, and Application Logic.
-- **Member 3 ([Name])**: Deployment (Render.com), Database Configuration (MongoDB), Quality Assurance/Testing, and Project Documentation.
+- **Team Lead (Adithyan V S)**: Project Management, UI/UX Design, Ideation, Presentation Preparation, Demo Video Creation, and Project Documentation.
+- **Member 2 (Adhnan Mundampra)**: Core Full-Stack Development (React & Express), Groq AI OCR Integration, Google Maps API Setup, Database Configuration, and Application Deployment.
 
 ---
 Made with ❤️ at MuLearn MakeMu
