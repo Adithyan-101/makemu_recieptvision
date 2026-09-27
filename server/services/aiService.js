@@ -53,7 +53,7 @@ Example format:
 
 CRITICAL RULES:
 1. Do not include prices or tax. Just the full product name.
-2. Accurately predict packaging. Prioritize "Organic" for items with significant organic waste (like peels/shells).
+2. Accurately predict packaging. Prioritize "Organic" for items with significant organic waste (like peels/shells). ALWAYS include an "Organic" waste stream for perishable food/drinks (e.g. "Spoiled milk", "Expired cheese") with timing "on_expiry".
 3. If no products are found, return [].
 4. Return ONLY valid JSON. No markdown backticks.
 5. YOU MUST MINIFY THE JSON (NO spaces, NO newlines) to save tokens.`;

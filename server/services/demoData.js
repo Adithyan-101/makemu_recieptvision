@@ -28,7 +28,7 @@ const calculateDates = (shelfLifeDays) => {
 };
 
 const demoProducts = [
-  { name: 'AMUL MILK 1L', quantity: 1, packaging: 'Plastic pouch', wasteCategory: 'Plastic', confidence: 0.95, storageCondition: 'Refrigerated', wasteStreams: [{type: 'Plastic pouch', wasteCategory: 'Plastic', timing: 'immediate'}], ...calculateDates(5) },
+  { name: 'AMUL MILK 1L', quantity: 1, packaging: 'Plastic pouch', wasteCategory: 'Plastic', confidence: 0.95, storageCondition: 'Refrigerated', wasteStreams: [{type: 'Plastic pouch', wasteCategory: 'Plastic', timing: 'immediate'}, {type: 'Spoiled milk', wasteCategory: 'Organic', timing: 'on_expiry'}], ...calculateDates(5) },
   { name: 'PARLE-G BISCUITS', quantity: 1, packaging: 'Plastic wrapper', wasteCategory: 'Plastic', confidence: 0.92, storageCondition: 'Room Temperature', wasteStreams: [{type: 'Plastic wrapper', wasteCategory: 'Plastic', timing: 'immediate'}], ...calculateDates(180) },
   { name: 'BOTTLED WATER 500ML', quantity: 1, packaging: 'PET bottle', wasteCategory: 'Plastic', confidence: 0.98, storageCondition: 'Room Temperature', wasteStreams: [{type: 'PET bottle', wasteCategory: 'Plastic', timing: 'immediate'}], ...calculateDates(365) },
   { name: 'SHAMPOO 200ML', quantity: 1, packaging: 'Plastic bottle', wasteCategory: 'Plastic', confidence: 0.90, storageCondition: 'Room Temperature', wasteStreams: [{type: 'Plastic bottle', wasteCategory: 'Plastic', timing: 'immediate'}], ...calculateDates(730) },
@@ -46,6 +46,7 @@ const demoWasteSummary = {
   ],
   streams: [
     { productName: 'AMUL MILK 1L', type: 'Plastic pouch', wasteCategory: 'Plastic', timing: 'immediate' },
+    { productName: 'AMUL MILK 1L', type: 'Spoiled milk', wasteCategory: 'Organic', timing: 'on_expiry' },
     { productName: 'PARLE-G BISCUITS', type: 'Plastic wrapper', wasteCategory: 'Plastic', timing: 'immediate' },
     { productName: 'BOTTLED WATER 500ML', type: 'PET bottle', wasteCategory: 'Plastic', timing: 'immediate' },
     { productName: 'SHAMPOO 200ML', type: 'Plastic bottle', wasteCategory: 'Plastic', timing: 'immediate' },

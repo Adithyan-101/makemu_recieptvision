@@ -30,15 +30,6 @@ export default function ReceiptAnalysis() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (id === 'demo' || id === 'new') {
-          const localData = localStorage.getItem('lastAnalysis');
-          if (localData) {
-            setData(JSON.parse(localData));
-            setLoading(false);
-            return;
-          }
-        }
-        
         const response = await axios.get(`/api/receipts/${id}`);
         setData(response.data);
         localStorage.setItem('lastAnalysis', JSON.stringify(response.data));
@@ -105,7 +96,7 @@ export default function ReceiptAnalysis() {
       </div>
 
       {/* Stats Row */}
-      <div className="animate-fade-in-up grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8" style={{ animationDelay: '0.1s' }}>
+      <div className="animate-fade-in-up grid grid-cols-2 sm:grid-cols-2 gap-4 mb-8" style={{ animationDelay: '0.1s' }}>
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <p className="text-3xl font-black text-gray-900">{totalItems}</p>
           <p className="text-sm text-gray-500 font-medium">Products Found</p>
@@ -113,14 +104,6 @@ export default function ReceiptAnalysis() {
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <p className="text-3xl font-black text-emerald-600">{recyclableCount}</p>
           <p className="text-sm text-gray-500 font-medium">Recyclable Items</p>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-amber-100 shadow-sm">
-          <p className="text-3xl font-black text-amber-600">{stateSummary[WASTE_STATES.GENERATED] || 0}</p>
-          <p className="text-sm text-gray-500 font-medium">🗑️ New Items</p>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm">
-          <p className="text-3xl font-black text-emerald-600">{stateSummary[WASTE_STATES.DISPOSED] || 0}</p>
-          <p className="text-sm text-gray-500 font-medium">🎉 Disposed</p>
         </div>
       </div>
 
@@ -172,27 +155,35 @@ export default function ReceiptAnalysis() {
                     
                     {(() => {
                       const nonPerishable = ['Plastic', 'Paper/Cardboard', 'Glass', 'Metal', 'Battery/Special Waste', 'E-waste'];
-                      if (nonPerishable.includes(product.wasteCategory)) {
-                        return (
-                          <div className="mt-2">
-                            <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-600 border-blue-200">
-                              🏭 Pile up &amp; bulk dispose — no expiry
-                            </span>
-                          </div>
+                      const hasExpiry = dynamicDaysRemaining !== undefined && dynamicDaysRemaining !== null;
+                      
+                      const tags = [];
+
+                      if (hasExpiry) {
+                        tags.push(
+                          <span key="expiry" className={`px-2.5 py-1 rounded-full text-xs font-bold border ${dynamicDaysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : dynamicDaysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                            {product.isEstimatedExpiry ? '~ ' : ''}
+                            {dynamicDaysRemaining < 0 ? 'Expired' : dynamicDaysRemaining === 0 ? 'Expires today' : `${dynamicDaysRemaining} days left`}
+                            {dynamicExpiryDate && ` (Expires: ${new Date(dynamicExpiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
+                            {product.isEstimatedExpiry && ' (estimated)'}
+                          </span>
+                        );
+                      } else if (nonPerishable.includes(product.wasteCategory)) {
+                        tags.push(
+                          <span key="pileup" className="px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-600 border-blue-200">
+                            🏭 Pile up &amp; bulk dispose — no expiry
+                          </span>
                         );
                       }
-                      if (dynamicDaysRemaining !== undefined) {
+
+                      if (tags.length > 0) {
                         return (
                           <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${dynamicDaysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : dynamicDaysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                              {product.isEstimatedExpiry ? '~ ' : ''}
-                              {dynamicDaysRemaining < 0 ? 'Expired' : dynamicDaysRemaining === 0 ? 'Expires today' : `${dynamicDaysRemaining} days left`}
-                              {dynamicExpiryDate && ` (Expires: ${new Date(dynamicExpiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
-                              {product.isEstimatedExpiry && ' (estimated)'}
-                            </span>
+                            {tags}
                           </div>
                         );
                       }
+                      
                       return null;
                     })()}
 
@@ -200,17 +191,9 @@ export default function ReceiptAnalysis() {
                       <div className="mt-3 space-y-2">
                         {product.wasteStreams.map((stream, sIdx) => {
                           const streamConfig = wasteConfig[stream.wasteCategory] || wasteConfig['Other'];
-                          const timingLabels = {
-                            'immediate': { label: 'Dispose now', icon: '🔵' },
-                            'on_consumption': { label: 'When consumed', icon: '🟡' },
-                            'on_expiry': { label: 'If expired/spoiled', icon: '🔴' }
-                          };
-                          const timing = timingLabels[stream.timing] || { label: stream.timing, icon: '⚪' };
                           return (
                             <div key={sIdx} className="flex items-center gap-2 text-xs">
-                              <span>{timing.icon}</span>
-                              <span className="font-bold text-gray-700">{timing.label}:</span>
-                              <span className="text-gray-600">{stream.type}</span>
+                              <span className="text-gray-600 font-medium">↳ {stream.type}</span>
                               <span className={`px-2 py-0.5 rounded-full font-bold border ${streamConfig.bg} ${streamConfig.text} ${streamConfig.border}`}>
                                 {stream.wasteCategory}
                               </span>
@@ -220,25 +203,6 @@ export default function ReceiptAnalysis() {
                       </div>
                     )}
 
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 pl-10 sm:pl-0 flex-shrink-0">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${config.bg} ${config.text} ${config.border}`}>
-                    {product.wasteCategory}
-                  </span>
-                  
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-1000 ${
-                          confidencePercent > 80 ? 'bg-emerald-500' : 
-                          confidencePercent > 50 ? 'bg-amber-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${confidencePercent}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-bold text-gray-500 w-9">{confidencePercent}%</span>
                   </div>
                 </div>
                 </div>

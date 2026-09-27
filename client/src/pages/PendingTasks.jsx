@@ -122,6 +122,11 @@ export default function PendingTasks() {
         if (product.wasteStreams && product.wasteStreams.length > 0) {
           // One task per waste stream
           product.wasteStreams.forEach((stream, streamIdx) => {
+            // If the item is only generated on expiry, hide it from tasks until it actually expires
+            if (stream.timing === 'on_expiry' && expiryDate && new Date() < expiryDate) {
+              return;
+            }
+
             const key = getProductKey(`${product.name}::${stream.type}`, scanId, index * 100 + streamIdx);
             const state = getWasteState(key);
             // Packaging/immediate streams don't expire — don't attach expiry info
