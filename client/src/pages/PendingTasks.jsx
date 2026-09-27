@@ -78,19 +78,21 @@ export default function PendingTasks() {
           product.wasteStreams.forEach((stream, streamIdx) => {
             const key = getProductKey(`${product.name}::${stream.type}`, scanId, index * 100 + streamIdx);
             const state = getWasteState(key);
+            // Packaging/immediate streams don't expire — don't attach expiry info
+            const isPackaging = stream.timing === 'immediate';
             if (grouped[state]) {
               grouped[state].push({
-                // Stream-specific fields
                 name: product.name,
                 streamType: stream.type,
                 wasteCategory: stream.wasteCategory,
                 timing: stream.timing,
                 timingLabel: timingLabels[stream.timing] || { label: stream.timing, icon: '⚪' },
-                // Product-level fields
+                isPackaging,
                 packaging: product.packaging,
                 storageCondition: product.storageCondition,
-                daysRemaining: product.daysRemaining,
-                expiryDate,
+                // Only attach expiry data for perishable streams
+                daysRemaining: isPackaging ? null : product.daysRemaining,
+                expiryDate: isPackaging ? null : expiryDate,
                 scanId,
                 index: index * 100 + streamIdx,
                 scanDate: receipt.createdAt,
@@ -123,9 +125,13 @@ export default function PendingTasks() {
       });
     });
 
-    // Sort each group: expired/soonest first, no-expiry last
+    // Sort: perishable/expiring items first, packaging (no expiry) always at bottom
     Object.keys(grouped).forEach(state => {
       grouped[state].sort((a, b) => {
+        // Packaging items always go to the bottom
+        if (a.isPackaging && !b.isPackaging) return 1;
+        if (!a.isPackaging && b.isPackaging) return -1;
+        // Both perishable: sort by soonest expiry first
         const aDays = a.daysRemaining != null ? a.daysRemaining : Infinity;
         const bDays = b.daysRemaining != null ? b.daysRemaining : Infinity;
         return aDays - bDays;
@@ -227,12 +233,19 @@ export default function PendingTasks() {
                               {item.packaging || 'Unknown packaging'}
                             </span>
                             <span className="text-gray-300">•</span>
-                            <span className={`font-medium ${item.expiryDate ? (item.expiryDate < new Date() ? 'text-rose-500 font-bold' : 'text-emerald-600') : 'text-gray-400'}`}>
-                              {item.expiryDate 
-                                ? `Expires ${item.expiryDate.toLocaleDateString()}` 
-                                : `Scanned ${new Date(item.scanDate).toLocaleDateString()}`
-                              }
-                            </span>
+                            {item.isPackaging ? (
+                              <span className="font-medium text-blue-500 flex items-center gap-1">
+                                🏭 Pile up &amp; bulk dispose at nearest hub
+                              </span>
+                            ) : item.expiryDate ? (
+                              <span className={`font-medium ${item.expiryDate < new Date() ? 'text-rose-500 font-bold' : 'text-emerald-600'}`}>
+                                {item.expiryDate < new Date() ? '⚠️ Expired' : `Expires ${item.expiryDate.toLocaleDateString()}`}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 font-medium">
+                                Scanned {new Date(item.scanDate).toLocaleDateString()}
+                              </span>
+                            )}
                           </div>
                         </div>
                         

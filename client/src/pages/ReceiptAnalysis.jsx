@@ -170,16 +170,31 @@ export default function ReceiptAnalysis() {
                       )}
                     </div>
                     
-                    {dynamicDaysRemaining !== undefined && (
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${dynamicDaysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : dynamicDaysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                           {product.isEstimatedExpiry ? '~ ' : ''}
-                           {dynamicDaysRemaining < 0 ? 'Expired' : dynamicDaysRemaining === 0 ? 'Expires today' : `${dynamicDaysRemaining} days left`}
-                           {dynamicExpiryDate && ` (Expires: ${new Date(dynamicExpiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
-                           {product.isEstimatedExpiry && ' (estimated)'}
-                         </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const nonPerishable = ['Plastic', 'Paper/Cardboard', 'Glass', 'Metal', 'Battery/Special Waste', 'E-waste'];
+                      if (nonPerishable.includes(product.wasteCategory)) {
+                        return (
+                          <div className="mt-2">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-600 border-blue-200">
+                              🏭 Pile up &amp; bulk dispose — no expiry
+                            </span>
+                          </div>
+                        );
+                      }
+                      if (dynamicDaysRemaining !== undefined) {
+                        return (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${dynamicDaysRemaining <= 0 ? 'bg-red-50 text-red-700 border-red-200' : dynamicDaysRemaining <= 3 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                              {product.isEstimatedExpiry ? '~ ' : ''}
+                              {dynamicDaysRemaining < 0 ? 'Expired' : dynamicDaysRemaining === 0 ? 'Expires today' : `${dynamicDaysRemaining} days left`}
+                              {dynamicExpiryDate && ` (Expires: ${new Date(dynamicExpiryDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})})`}
+                              {product.isEstimatedExpiry && ' (estimated)'}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     {product.wasteStreams && product.wasteStreams.length > 0 && (
                       <div className="mt-3 space-y-2">
