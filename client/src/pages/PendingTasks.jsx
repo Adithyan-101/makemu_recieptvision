@@ -8,16 +8,19 @@ import {
   Package, 
   Sparkles, 
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Layers
 } from 'lucide-react';
 import WasteStateTracker from '../components/WasteStateTracker';
 import { 
   getWasteState, 
   setWasteState,
+  bulkSetWasteState,
   getProductKey, 
   WASTE_STATES, 
   STATE_ORDER, 
-  STATE_CONFIG 
+  STATE_CONFIG,
+  isNonOrganic
 } from '../utils/wasteState';
 
 // Keyword-based upcycling tips for organic waste streams
@@ -34,6 +37,27 @@ const ORGANIC_TIPS = [
   { keywords: ['bread', 'stale'], emoji: '🍞', tip: 'Break into pieces for garden birds. Avoid composting large amounts.' },
   { keywords: ['fruit', 'apple', 'mango', 'grape'], emoji: '🍎', tip: 'Compost or bury near trees — fruit scraps enrich soil with sugars and microbes.' },
 ];
+
+const CATEGORY_EMOJIS = {
+  'Plastic': '♻️',
+  'Paper/Cardboard': '📄',
+  'Glass': '🍶',
+  'Metal': '🥫',
+  'E-waste': '💻',
+  'Battery/Special Waste': '🔋',
+  'Organic': '🌱',
+  'Other': '📦',
+};
+
+const CATEGORY_COLORS = {
+  'Plastic':               { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200',   btnFrom: 'from-blue-500',   btnTo: 'to-cyan-500',   btnHoverFrom: 'hover:from-blue-600',   btnHoverTo: 'hover:to-cyan-600' },
+  'Paper/Cardboard':       { bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200',  btnFrom: 'from-amber-500',  btnTo: 'to-orange-500', btnHoverFrom: 'hover:from-amber-600',  btnHoverTo: 'hover:to-orange-600' },
+  'Glass':                 { bg: 'bg-purple-50',  text: 'text-purple-700', border: 'border-purple-200', btnFrom: 'from-purple-500', btnTo: 'to-pink-500',   btnHoverFrom: 'hover:from-purple-600', btnHoverTo: 'hover:to-pink-600' },
+  'Metal':                 { bg: 'bg-slate-100',  text: 'text-slate-700',  border: 'border-slate-300',  btnFrom: 'from-slate-500',  btnTo: 'to-gray-500',   btnHoverFrom: 'hover:from-slate-600',  btnHoverTo: 'hover:to-gray-600' },
+  'E-waste':               { bg: 'bg-orange-50',  text: 'text-orange-700', border: 'border-orange-200', btnFrom: 'from-orange-500', btnTo: 'to-red-500',    btnHoverFrom: 'hover:from-orange-600', btnHoverTo: 'hover:to-red-600' },
+  'Battery/Special Waste': { bg: 'bg-red-50',     text: 'text-red-700',    border: 'border-red-200',    btnFrom: 'from-red-500',    btnTo: 'to-rose-500',   btnHoverFrom: 'hover:from-red-600',    btnHoverTo: 'hover:to-rose-600' },
+  'Other':                 { bg: 'bg-gray-50',    text: 'text-gray-700',   border: 'border-gray-200',   btnFrom: 'from-gray-500',   btnTo: 'to-slate-500',  btnHoverFrom: 'hover:from-gray-600',   btnHoverTo: 'hover:to-slate-600' },
+};
 
 function getOrganicTip(streamType) {
   if (!streamType) return null;
@@ -78,6 +102,7 @@ export default function PendingTasks() {
   const tasksByState = useMemo(() => {
     const grouped = {
       [WASTE_STATES.GENERATED]: [],
+      [WASTE_STATES.PILED_UP]: [],
       [WASTE_STATES.DISPOSED]: [],
     };
 
@@ -162,7 +187,28 @@ export default function PendingTasks() {
     return grouped;
   }, [receipts, updateTrigger]);
 
-  const totalPending = tasksByState[WASTE_STATES.GENERATED].length;
+  // Group piled-up items by waste category for the bulk section
+  const piledUpByCategory = useMemo(() => {
+    const groups = {};
+    tasksByState[WASTE_STATES.PILED_UP].forEach(item => {
+      const cat = item.wasteCategory || 'Other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
+    return groups;
+  }, [tasksByState]);
+
+  const handleDisposeAll = (category) => {
+    const items = piledUpByCategory[category];
+    if (!items || items.length === 0) return;
+    const keys = items.map(item => item._key);
+    bulkSetWasteState(keys, WASTE_STATES.DISPOSED);
+    handleStateChange();
+  };
+
+  const totalGenerated = tasksByState[WASTE_STATES.GENERATED].length;
+  const totalPiledUp = tasksByState[WASTE_STATES.PILED_UP].length;
+  const totalPending = totalGenerated + totalPiledUp;
 
   if (loading) {
     return (
@@ -189,6 +235,11 @@ export default function PendingTasks() {
         <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 inline-flex items-center gap-3 self-start sm:self-end">
           <span className="text-gray-500 text-sm font-bold">Total Pending:</span>
           <span className="text-xl font-black text-emerald-600">{totalPending}</span>
+          {totalPiledUp > 0 && (
+            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+              📦 {totalPiledUp} piled
+            </span>
+          )}
         </div>
       </div>
 
@@ -207,104 +258,187 @@ export default function PendingTasks() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Grouped Lists */}
-          {STATE_ORDER.filter(s => s !== WASTE_STATES.DISPOSED).reverse().map(state => {
-            if (filterState && filterState !== state) return null;
-            
-            const items = tasksByState[state];
-            if (items.length === 0) return null;
+          {/* Generated Items — Main Task List */}
+          {totalGenerated > 0 && (
+            <>
+              {[WASTE_STATES.GENERATED].map(state => {
+                if (filterState && filterState !== state) return null;
+                
+                const items = tasksByState[state];
+                if (items.length === 0) return null;
 
-            const config = STATE_CONFIG[state];
-            
-            return (
-              <div key={state} className="animate-fade-in-up">
-                <div className="flex items-center gap-3 mb-4 pl-1">
-                  <span className="text-2xl">{config.emoji}</span>
-                  <div>
-                    <h2 className="text-xl font-black text-gray-900">{config.label}</h2>
-                    <p className="text-sm text-gray-400 font-medium">{config.description}</p>
-                  </div>
-                  <div className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${config.bg} ${config.text}`}>
-                    {items.length} item{items.length !== 1 ? 's' : ''}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {items.map((item) => (
-                    <div key={item._key} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h3 className="font-bold text-gray-900 text-lg">{item.name}</h3>
-                            {item.timingLabel && (
-                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                                {item.timingLabel.icon} {item.timingLabel.label}
-                              </span>
-                            )}
-                          </div>
-                          {item.streamType && (
-                            <p className="text-sm font-semibold text-emerald-700 mb-1">↳ {item.streamType}</p>
-                          )}
-                          {/* Organic upcycling tip */}
-                          {item.wasteCategory === 'Organic' && (() => {
-                            const tip = getOrganicTip(item.streamType || item.name);
-                            return tip ? (
-                              <div className="flex items-start gap-2 mt-1 mb-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl">
-                                <span className="text-base flex-shrink-0">{tip.emoji}</span>
-                                <p className="text-xs text-green-800 font-medium leading-snug">
-                                  <span className="font-bold">Instead of binning: </span>{tip.tip}
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="flex items-start gap-2 mt-1 mb-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl">
-                                <span className="text-base">🌱</span>
-                                <p className="text-xs text-green-800 font-medium leading-snug">
-                                  <span className="font-bold">Compost it: </span>Add to your green bin or home compost pile to enrich soil.
-                                </p>
-                              </div>
-                            );
-                          })()}
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-lg font-bold">
-                              {item.wasteCategory}
-                            </span>
-                            <span className="text-gray-400 font-medium flex items-center gap-1">
-                              <Package className="w-3.5 h-3.5" />
-                              {item.packaging || 'Unknown packaging'}
-                            </span>
-                            <span className="text-gray-300">•</span>
-                            {item.isPackaging ? (
-                              <span className="font-medium text-blue-500 flex items-center gap-1">
-                                🏭 Pile up &amp; bulk dispose at nearest hub
-                              </span>
-                            ) : item.expiryDate ? (
-                              <span className={`font-medium ${item.expiryDate < new Date() ? 'text-rose-500 font-bold' : 'text-emerald-600'}`}>
-                                {item.expiryDate < new Date() ? '⚠️ Expired' : `Expires ${item.expiryDate.toLocaleDateString()}`}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 font-medium">
-                                Scanned {new Date(item.scanDate).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex-shrink-0 sm:w-64 border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-5">
-                          <WasteStateTracker
-                            productName={`${item.name}::${item.streamType || ''}`}
-                            wasteCategory={item.wasteCategory}
-                            scanId={item.scanId}
-                            index={item.index}
-                            onStateChange={handleStateChange}
-                          />
-                        </div>
+                const config = STATE_CONFIG[state];
+                
+                return (
+                  <div key={state} className="animate-fade-in-up">
+                    <div className="flex items-center gap-3 mb-4 pl-1">
+                      <span className="text-2xl">{config.emoji}</span>
+                      <div>
+                        <h2 className="text-xl font-black text-gray-900">{config.label}</h2>
+                        <p className="text-sm text-gray-400 font-medium">{config.description}</p>
+                      </div>
+                      <div className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${config.bg} ${config.text}`}>
+                        {items.length} item{items.length !== 1 ? 's' : ''}
                       </div>
                     </div>
-                  ))}
+
+                    <div className="grid grid-cols-1 gap-4">
+                      {items.map((item) => (
+                        <div key={item._key} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <h3 className="font-bold text-gray-900 text-lg">{item.name}</h3>
+                                {item.timingLabel && (
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                    {item.timingLabel.icon} {item.timingLabel.label}
+                                  </span>
+                                )}
+                              </div>
+                              {item.streamType && (
+                                <p className="text-sm font-semibold text-emerald-700 mb-1">↳ {item.streamType}</p>
+                              )}
+                              {/* Organic upcycling tip */}
+                              {item.wasteCategory === 'Organic' && (() => {
+                                const tip = getOrganicTip(item.streamType || item.name);
+                                return tip ? (
+                                  <div className="flex items-start gap-2 mt-1 mb-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl">
+                                    <span className="text-base flex-shrink-0">{tip.emoji}</span>
+                                    <p className="text-xs text-green-800 font-medium leading-snug">
+                                      <span className="font-bold">Instead of binning: </span>{tip.tip}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-2 mt-1 mb-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl">
+                                    <span className="text-base">🌱</span>
+                                    <p className="text-xs text-green-800 font-medium leading-snug">
+                                      <span className="font-bold">Compost it: </span>Add to your green bin or home compost pile to enrich soil.
+                                    </p>
+                                  </div>
+                                );
+                              })()}
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-lg font-bold">
+                                  {item.wasteCategory}
+                                </span>
+                                <span className="text-gray-400 font-medium flex items-center gap-1">
+                                  <Package className="w-3.5 h-3.5" />
+                                  {item.packaging || 'Unknown packaging'}
+                                </span>
+                                <span className="text-gray-300">•</span>
+                                {item.isPackaging ? (
+                                  <span className="font-medium text-blue-500 flex items-center gap-1">
+                                    🏭 Pile up &amp; bulk dispose at nearest hub
+                                  </span>
+                                ) : item.expiryDate ? (
+                                  <span className={`font-medium ${item.expiryDate < new Date() ? 'text-rose-500 font-bold' : 'text-emerald-600'}`}>
+                                    {item.expiryDate < new Date() ? '⚠️ Expired' : `Expires ${item.expiryDate.toLocaleDateString()}`}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 font-medium">
+                                    Scanned {new Date(item.scanDate).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex-shrink-0 sm:w-64 border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-5">
+                              <WasteStateTracker
+                                productName={`${item.name}::${item.streamType || ''}`}
+                                wasteCategory={item.wasteCategory}
+                                scanId={item.scanId}
+                                index={item.index}
+                                onStateChange={handleStateChange}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* Pending Waste — Piled-Up Items Grouped by Category       */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {totalPiledUp > 0 && (
+            <div className="animate-fade-in-up mt-2 pt-8 border-t-2 border-dashed border-amber-200/60">
+              <div className="flex items-center gap-3 mb-6 pl-1">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900">Pending Waste</h2>
+                  <p className="text-sm text-gray-400 font-medium">Non-organic waste piled up — dispose by category when ready</p>
+                </div>
+                <div className="ml-auto px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  {totalPiledUp} item{totalPiledUp !== 1 ? 's' : ''} across {Object.keys(piledUpByCategory).length} {Object.keys(piledUpByCategory).length === 1 ? 'category' : 'categories'}
                 </div>
               </div>
-            );
-          })}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {Object.entries(piledUpByCategory).map(([category, items]) => {
+                  const catColor = CATEGORY_COLORS[category] || CATEGORY_COLORS['Other'];
+                  const catEmoji = CATEGORY_EMOJIS[category] || '📦';
+                  
+                  return (
+                    <div
+                      key={category}
+                      className={`rounded-2xl border-2 ${catColor.border} ${catColor.bg} p-5 shadow-sm hover:shadow-md transition-shadow duration-200`}
+                    >
+                      {/* Category Header */}
+                      <div className="flex items-center gap-2.5 mb-4">
+                        <span className="text-xl">{catEmoji}</span>
+                        <h3 className="font-black text-gray-900 text-base">{category}</h3>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${catColor.text} bg-white/80 border ${catColor.border}`}>
+                          {items.length} item{items.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      {/* Items List */}
+                      <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                        {items.map(item => (
+                          <div
+                            key={item._key}
+                            className="flex items-center justify-between gap-2 text-sm bg-white/70 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/50"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-semibold text-gray-800 truncate">{item.name}</span>
+                              {item.streamType && (
+                                <span className="text-[11px] text-gray-400 font-medium flex-shrink-0">↳ {item.streamType}</span>
+                              )}
+                            </div>
+                            {item.packaging && (
+                              <span className="text-[10px] text-gray-400 font-medium flex-shrink-0 hidden sm:inline">
+                                {item.packaging}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Dispose All Button */}
+                      <button
+                        onClick={() => handleDisposeAll(category)}
+                        className={`
+                          w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold
+                          text-white bg-gradient-to-r ${catColor.btnFrom} ${catColor.btnTo}
+                          ${catColor.btnHoverFrom} ${catColor.btnHoverTo}
+                          shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]
+                        `}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Dispose All{items.length > 1 ? ` (${items.length})` : ''}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

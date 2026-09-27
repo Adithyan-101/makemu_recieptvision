@@ -106,10 +106,13 @@ export default function WasteStateTracker({ productName, wasteCategory, scanId, 
             className={`
               flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold
               transition-all duration-200 active:scale-95
-              bg-gray-800 hover:bg-gray-900 text-white shadow-sm shadow-gray-300
+              ${nextState === WASTE_STATES.PILED_UP
+                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200'
+                : 'bg-gray-800 hover:bg-gray-900 text-white shadow-sm shadow-gray-300'
+              }
             `}
           >
-            🎉 Mark Disposed
+            {nextState === WASTE_STATES.PILED_UP ? '📦 Pile Up' : '🎉 Mark Disposed'}
             <ArrowRight className="w-3 h-3" />
           </button>
         )}

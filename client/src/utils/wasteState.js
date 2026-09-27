@@ -12,6 +12,7 @@ const STORAGE_KEY = 'wasteStates';
 
 export const WASTE_STATES = {
   GENERATED: 'generated',
+  PILED_UP: 'piled_up',
   DISPOSED: 'disposed',
 };
 
@@ -25,6 +26,16 @@ export const STATE_CONFIG = {
     border: 'border-gray-200',
     dotColor: 'bg-gray-400',
     description: 'Waste has been generated from this product',
+  },
+  [WASTE_STATES.PILED_UP]: {
+    label: 'Piled Up',
+    shortLabel: 'Piled',
+    emoji: '📦',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+    dotColor: 'bg-amber-400',
+    description: 'Non-organic waste piled up for bulk disposal',
   },
   [WASTE_STATES.DISPOSED]: {
     label: 'Disposed',
@@ -40,6 +51,7 @@ export const STATE_CONFIG = {
 
 export const STATE_ORDER = [
   WASTE_STATES.GENERATED,
+  WASTE_STATES.PILED_UP,
   WASTE_STATES.DISPOSED,
 ];
 
@@ -109,7 +121,17 @@ export function needsCleaning(wasteCategory) {
 
 /** Get the applicable flow steps for a waste category */
 export function getFlowSteps(wasteCategory) {
+  // Organic waste skips the pile-up step — dispose directly
+  if (wasteCategory === 'Organic') {
+    return [WASTE_STATES.GENERATED, WASTE_STATES.DISPOSED];
+  }
+  // Non-organic waste goes through pile-up before disposal
   return STATE_ORDER;
+}
+
+/** Check if waste category is non-organic (eligible for pile-up) */
+export function isNonOrganic(wasteCategory) {
+  return wasteCategory && wasteCategory !== 'Organic';
 }
 
 /** Get all states summary for dashboard stats */
@@ -117,6 +139,7 @@ export function getStateSummary(totalServerItems = 0) {
   const states = loadStates();
   const summary = {
     [WASTE_STATES.GENERATED]: 0,
+    [WASTE_STATES.PILED_UP]: 0,
     [WASTE_STATES.DISPOSED]: 0,
     total: 0,
   };
@@ -136,4 +159,15 @@ export function getStateSummary(totalServerItems = 0) {
   }
   
   return summary;
+}
+
+/** Bulk-set multiple keys to a given state */
+export function bulkSetWasteState(keys, newState) {
+  const states = loadStates();
+  keys.forEach(key => { states[key] = newState; });
+  saveStates(states);
+  // Async bulk sync to backend
+  Promise.all(
+    keys.map(key => axios.post('/api/waste-states', { key, state: newState }).catch(console.error))
+  );
 }

@@ -188,7 +188,7 @@ export default function Dashboard() {
                   <p className="text-xs text-gray-400 font-medium">Track your waste from generation to disposal</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {STATE_ORDER.map(state => {
                   const config = STATE_CONFIG[state];
                   const summary = getStateSummary(data?.totalItems || 0);

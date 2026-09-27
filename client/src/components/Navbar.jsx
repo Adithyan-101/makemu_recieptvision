@@ -13,7 +13,7 @@ export default function Navbar() {
       const states = JSON.parse(localStorage.getItem('wasteStates') || '{}');
       let count = 0;
       Object.values(states).forEach(s => {
-        if (s === 'generated') count++;
+        if (s === 'generated' || s === 'piled_up') count++;
       });
       setPendingCount(count);
     };
