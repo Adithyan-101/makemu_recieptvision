@@ -80,6 +80,15 @@ export default function PendingTasks() {
       });
     });
 
+    // Sort each group: nearest expiry (or already expired) first, no-expiry items last
+    Object.keys(grouped).forEach(state => {
+      grouped[state].sort((a, b) => {
+        const aDays = a.daysRemaining != null ? a.daysRemaining : Infinity;
+        const bDays = b.daysRemaining != null ? b.daysRemaining : Infinity;
+        return aDays - bDays;
+      });
+    });
+
     return grouped;
   }, [receipts, updateTrigger]);
 
