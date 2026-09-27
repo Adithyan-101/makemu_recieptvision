@@ -20,6 +20,27 @@ import {
   STATE_CONFIG 
 } from '../utils/wasteState';
 
+// Keyword-based upcycling tips for organic waste streams
+const ORGANIC_TIPS = [
+  { keywords: ['eggshell', 'egg shell'], emoji: '🥚', tip: 'Crush & sprinkle around plants — calcium fertilizer that also deters slugs.' },
+  { keywords: ['banana', 'banana peel'], emoji: '🍌', tip: 'Soak in water 48h → potassium-rich fertilizer. Or bury near roses.' },
+  { keywords: ['coffee', 'grounds', 'coffee grounds'], emoji: '☕', tip: 'Mix into soil for acid-loving plants like blueberries & ferns.' },
+  { keywords: ['onion', 'garlic', 'skin', 'peel'], emoji: '🧅', tip: 'Boil skins in water, cool, and use to water plants — antifungal & nutrient-rich.' },
+  { keywords: ['citrus', 'orange', 'lemon', 'lime'], emoji: '🍊', tip: 'Place near anthills as a natural repellent. Blend with vinegar for a DIY cleaner.' },
+  { keywords: ['vegetable', 'veggie', 'carrot', 'celery', 'scrap', 'peel', 'top'], emoji: '🥕', tip: 'Boil into a vegetable stock. Carrot tops, celery ends & onion skins all work.' },
+  { keywords: ['bone', 'bones'], emoji: '🦴', tip: 'Give to dogs (avoid chicken bones). Or bake & crush into bone meal fertilizer.' },
+  { keywords: ['tea', 'tea bag', 'leaves'], emoji: '🍵', tip: 'Empty loose leaves around plants — deters pests and improves drainage.' },
+  { keywords: ['corn', 'husk', 'cob'], emoji: '🌽', tip: 'Soak cobs for a natural scrubber. Husks can be used as garden mulch.' },
+  { keywords: ['bread', 'stale'], emoji: '🍞', tip: 'Break into pieces for garden birds. Avoid composting large amounts.' },
+  { keywords: ['fruit', 'apple', 'mango', 'grape'], emoji: '🍎', tip: 'Compost or bury near trees — fruit scraps enrich soil with sugars and microbes.' },
+];
+
+function getOrganicTip(streamType) {
+  if (!streamType) return null;
+  const lower = streamType.toLowerCase();
+  return ORGANIC_TIPS.find(t => t.keywords.some(k => lower.includes(k))) || null;
+}
+
 export default function PendingTasks() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filterState = searchParams.get('state');
@@ -224,6 +245,25 @@ export default function PendingTasks() {
                           {item.streamType && (
                             <p className="text-sm font-semibold text-emerald-700 mb-1">↳ {item.streamType}</p>
                           )}
+                          {/* Organic upcycling tip */}
+                          {item.wasteCategory === 'Organic' && (() => {
+                            const tip = getOrganicTip(item.streamType || item.name);
+                            return tip ? (
+                              <div className="flex items-start gap-2 mt-1 mb-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl">
+                                <span className="text-base flex-shrink-0">{tip.emoji}</span>
+                                <p className="text-xs text-green-800 font-medium leading-snug">
+                                  <span className="font-bold">Instead of binning: </span>{tip.tip}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="flex items-start gap-2 mt-1 mb-2 px-3 py-2 bg-green-50 border border-green-100 rounded-xl">
+                                <span className="text-base">🌱</span>
+                                <p className="text-xs text-green-800 font-medium leading-snug">
+                                  <span className="font-bold">Compost it: </span>Add to your green bin or home compost pile to enrich soil.
+                                </p>
+                              </div>
+                            );
+                          })()}
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-lg font-bold">
                               {item.wasteCategory}
