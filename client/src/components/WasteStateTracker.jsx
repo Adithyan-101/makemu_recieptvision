@@ -16,7 +16,7 @@ import { ArrowRight, Check } from 'lucide-react';
  * WasteStateTracker — inline component for a single product card.
  * Shows the current state, a progress bar, and a button to advance to the next state.
  */
-export default function WasteStateTracker({ productName, wasteCategory, scanId, index = 0, compact = false, onStateChange }) {
+export default function WasteStateTracker({ productName, wasteCategory, scanId, index = 0, compact = false, actionOnly = false, onStateChange }) {
   const productKey = getProductKey(productName, scanId, index);
   const [currentState, setCurrentState] = useState(() => getWasteState(productKey));
 
@@ -52,6 +52,32 @@ export default function WasteStateTracker({ productName, wasteCategory, scanId, 
           >
             → {STATE_CONFIG[nextState].shortLabel}
           </button>
+        )}
+      </div>
+    );
+  }
+
+  if (actionOnly) {
+    return (
+      <div className="flex items-center justify-end w-full h-full">
+        {nextState ? (
+          <button
+            onClick={advanceState}
+            className={`
+              flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold w-full sm:w-auto
+              transition-all duration-200 active:scale-95
+              ${nextState === WASTE_STATES.PILED_UP
+                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200'
+                : 'bg-gray-800 hover:bg-gray-900 text-white shadow-sm shadow-gray-300'
+              }
+            `}
+          >
+            {nextState === WASTE_STATES.PILED_UP ? 'Pile Up' : 'Dispose'}
+          </button>
+        ) : (
+          <span className="flex items-center gap-1 text-sm font-bold text-emerald-600">
+            <Check className="w-4 h-4" /> Done
+          </span>
         )}
       </div>
     );

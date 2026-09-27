@@ -271,17 +271,6 @@ export default function PendingTasks() {
                 
                 return (
                   <div key={state} className="animate-fade-in-up">
-                    <div className="flex items-center gap-3 mb-4 pl-1">
-                      <span className="text-2xl">{config.emoji}</span>
-                      <div>
-                        <h2 className="text-xl font-black text-gray-900">{config.label}</h2>
-                        <p className="text-sm text-gray-400 font-medium">{config.description}</p>
-                      </div>
-                      <div className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${config.bg} ${config.text}`}>
-                        {items.length} item{items.length !== 1 ? 's' : ''}
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-1 gap-4">
                       {items.map((item) => (
                         <div key={item._key} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -342,12 +331,13 @@ export default function PendingTasks() {
                               </div>
                             </div>
                             
-                            <div className="flex-shrink-0 sm:w-64 border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-5">
+                            <div className="flex-shrink-0 sm:w-48 border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-5 flex items-center justify-center">
                               <WasteStateTracker
                                 productName={`${item.name}::${item.streamType || ''}`}
                                 wasteCategory={item.wasteCategory}
                                 scanId={item.scanId}
                                 index={item.index}
+                                actionOnly={true}
                                 onStateChange={handleStateChange}
                               />
                             </div>
