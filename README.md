@@ -1,120 +1,87 @@
-# ReceiptVision 🌿
+# ReceiptVision 🎯
 
-### "From Receipt to Responsible Disposal"
+## Basic Details
+### Team Name: [Your Team Name]
 
+### Team Members
+- Team Lead: [Name] - [College]
+- Member 2: [Name] - [College]
+- Member 3: [Name] - [College]
+
+### Project Description
 An AI-powered predictive waste management platform that scans grocery receipts, predicts the waste your purchases will generate, and helps you dispose of it responsibly.
 
-## 🚀 Quick Start
+### The Problem 
+People often buy groceries without realizing the amount and type of waste the packaging will generate. This leads to improper disposal, contamination of recyclables, and increased landfill waste because consumers lack accessible knowledge on how to recycle specific items or where to drop off special waste.
 
-### Prerequisites
-- Node.js 18+
-- MongoDB Atlas account (or local MongoDB)
-- Google Maps API key (optional, for map features)
+### The Solution 
+ReceiptVision solves this by using AI to scan grocery receipts, instantly identifying purchased products, inferring their packaging materials, and forecasting the resulting waste footprint. It provides a visual breakdown of your waste, step-by-step disposal guidelines for each material, and uses geolocation/Google Maps to pinpoint the nearest appropriate recycling centers. 
 
-### 1. Install Dependencies
+## Technical Details
+### Technologies/Components Used
+For Software:
+- **Languages used**: JavaScript, HTML, CSS
+- **Frameworks used**: React, Express.js, Tailwind CSS
+- **Libraries used**: Vite, Mongoose, Recharts, Lucide React, Axios, React Leaflet, Multer, Groq SDK
+- **Tools used**: MongoDB Atlas, Google Maps API, Groq Cloud (Llama 4 Scout / Qwen 2.5 VL), Render (Hosting)
+
+For Hardware:
+- *Not Applicable*
+
+### Implementation
+For Software:
+# Installation
 ```bash
+# Install dependencies for both client and server
 npm run install-all
-```
 
-### 2. Configure Environment
-```bash
+# Configure environment variables
 cp .env.example .env
 ```
+*(Edit the `.env` file to add your MongoDB URI, Groq API Key, and Google Maps API Key)*
 
-Edit `.env` with your values:
-```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/receiptvision
-GOOGLE_MAPS_API_KEY=your-key
-VITE_GOOGLE_MAPS_API_KEY=your-key
-GROQ_API_KEY=your-groq-api-key
-DEMO_MODE=true
-PORT=5000
-```
-
-### 3. Run the Application
+# Run
 ```bash
-# Run both frontend and backend
+# Run both frontend and backend concurrently
 npm run dev
 
-# Or separately:
-npm run server  # Backend on port 5000
-npm run client  # Frontend on port 5173
+# (Alternatively, for production on Render)
+npm run build
+npm start
 ```
 
-### 4. Open in Browser
-Visit **http://localhost:5173**
+### Project Documentation
+For Software:
 
-## 🎮 Demo Mode
+# Screenshots (Add at least 3)
+![Screenshot1](Add_screenshot_1_link_here)
+*Landing page and Receipt Scanner interface*
 
-Demo mode (`DEMO_MODE=true`, default) ensures the entire app works without external services. Click **"Try Demo Receipt"** on the scan page to see the full flow.
+![Screenshot2](Add_screenshot_2_link_here)
+*Waste Forecast and packaging breakdown analytics*
 
-## 🏗 Architecture
+![Screenshot3](Add_screenshot_3_link_here)
+*Nearby Disposal Centers using Google Maps integration*
 
-```
-RECEIPT → OCR/AI → PRODUCT IDENTIFICATION → PACKAGING INFERENCE → WASTE FORECAST → DISPOSAL GUIDANCE → NEARBY CENTRES
-```
+# Diagrams
+![Workflow](Add_your_workflow_architecture_diagram_link_here)
+*Architecture Pipeline: RECEIPT → OCR/AI → PRODUCT IDENTIFICATION → PACKAGING INFERENCE → WASTE FORECAST → DISPOSAL GUIDANCE → NEARBY CENTRES*
 
-### Tech Stack
-- **Frontend:** React, Vite, Tailwind CSS, Recharts, Lucide Icons
-- **Backend:** Node.js, Express, Mongoose
-- **Database:** MongoDB Atlas
-- **AI/OCR:** Groq API (Llama 4 Scout / Qwen 2.5 VL vision models)
-- **Maps:** Google Maps JavaScript API + Places API (New)
+For Hardware:
+*Not Applicable*
 
-## 📁 Project Structure
-```
-├── client/                 # React frontend
-│   └── src/
-│       ├── components/     # Reusable UI components
-│       ├── pages/          # Page components (9 pages)
-│       ├── services/       # API client
-│       ├── hooks/          # Custom React hooks
-│       └── utils/          # Utilities and constants
-├── server/                 # Express backend
-│   ├── config/             # DB connection, seed data
-│   ├── controllers/        # Route handlers
-│   ├── models/             # Mongoose schemas
-│   ├── routes/             # Express routes
-│   └── services/           # AI service, product matcher
-├── .env.example
-└── README.md
-```
+### Project Demo
+# Video
+[Add your demo video link here]
+*This video demonstrates scanning a sample grocery receipt, viewing the generated waste forecast, exploring disposal guidelines, and finding nearby recycling facilities on the map.*
 
-## 🔌 API Routes
+# Additional Demos
+[Add live hosted link here if applicable, e.g., https://receiptvision.onrender.com]
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/receipts/analyze` | Analyze receipt image (or demo) |
-| GET | `/api/receipts` | List all scans |
-| GET | `/api/receipts/:id` | Get scan details |
-| GET | `/api/waste-rules` | Get all waste rules |
-| GET | `/api/waste-rules/:category` | Get rule by category |
-| GET | `/api/dashboard` | Get user waste profile |
-| GET | `/api/products/search?q=` | Search products |
+## Team Contributions
+- [Name 1]: [Specific contributions - e.g., Frontend development, UI/UX, Maps integration]
+- [Name 2]: [Specific contributions - e.g., Backend API, Groq AI OCR integration, Database]
+- [Name 3]: [Specific contributions - e.g., Deployment, Project Management, Presentation]
 
-## 🎯 Hackathon Demo Flow (< 2 min)
-
-1. Open ReceiptVision landing page
-2. Click "Scan a Receipt"
-3. Click "Try Demo Receipt"
-4. See 7 products identified with packaging + confidence
-5. View waste breakdown (Plastic: 4, Paper: 1, Organic: 1, Special: 1)
-6. Navigate to Waste Forecast (charts + timeline)
-7. View Disposal Guide (expandable category cards)
-8. Click "Find Nearby Centres"
-9. Allow location → see real Google Maps results
-10. Select a facility → view details + "Get Directions"
-11. Visit Dashboard → eco score + stats
-
-## ⚠️ Known Limitations
-
-1. **No real authentication** — uses a demo user for the MVP
-2. **Packaging inference is approximate** — based on a curated product database (~25 products)
-3. **Waste rules are general** — not verified against specific local regulations
-4. **Facility acceptance not verified** — Google Places results are candidates only
-5. **Eco Score is a prototype metric** — not scientifically validated
-6. **OCR accuracy depends on receipt quality** — demo mode recommended for reliable demos
-
-## 📜 License
-
-Built for hackathon demonstration purposes.
+---
+Made with ❤️ at MuLearn MakeMu
