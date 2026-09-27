@@ -63,8 +63,18 @@ For Software:
 *Waste Forecast and packaging breakdown analytics*
 
 # Diagrams
-![Workflow](Add_your_workflow_architecture_diagram_link_here)
-*Architecture Pipeline: RECEIPT → OCR/AI → PRODUCT IDENTIFICATION → PACKAGING INFERENCE → WASTE FORECAST → DISPOSAL GUIDANCE → NEARBY CENTRES*
+
+```mermaid
+flowchart TD
+    A[📸 Receipt Image] -->|Upload / Scan| B(🧠 Groq AI OCR)
+    B -->|Extract Items| C{📦 Product Identification}
+    C -->|Match Material| D[♻️ Packaging Inference]
+    D -->|Calculate Footprint| E[📊 Waste Forecast]
+    E -->|Generate Rules| F[🗑️ Disposal Guidance]
+    F -->|Geolocation| G[🗺️ Google Maps Integration]
+    G -->|Pinpoint Facilities| H((✅ Nearby Recycling Centres))
+```
+*Architecture Pipeline: From receipt scanning to responsible disposal.*
 
 For Hardware:
 *Not Applicable*
