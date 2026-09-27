@@ -1,12 +1,11 @@
 # ReceiptVision 🎯
 
 ## Basic Details
-### Team Name: [Your Team Name]
+### Team Name: CodeX
 
 ### Team Members
-- Team Lead: [Name] - [College]
-- Member 2: [Name] - [College]
-- Member 3: [Name] - [College]
+- Team Lead: Adithyan V S - GECI
+- Member 2: Adhnan Mundampra - GECI
 
 ### Project Description
 An AI-powered predictive waste management platform that scans grocery receipts, predicts the waste your purchases will generate, and helps you dispose of it responsibly.
@@ -54,14 +53,14 @@ npm start
 For Software:
 
 # Screenshots (Add at least 3)
-![Screenshot1](Add_screenshot_1_link_here)
+![Landing Page](./docs/screenshot1.png)
 *Landing page and Receipt Scanner interface*
 
-![Screenshot2](Add_screenshot_2_link_here)
-*Waste Forecast and packaging breakdown analytics*
+![Scan Interface](./docs/screenshot2.png)
+*Receipt scanning and upload interface*
 
-![Screenshot3](Add_screenshot_3_link_here)
-*Nearby Disposal Centers using Google Maps integration*
+![Analysis Results](./docs/screenshot3.png)
+*Waste Forecast and packaging breakdown analytics*
 
 # Diagrams
 ![Workflow](Add_your_workflow_architecture_diagram_link_here)
@@ -76,7 +75,7 @@ For Hardware:
 *This video demonstrates scanning a sample grocery receipt, viewing the generated waste forecast, exploring disposal guidelines, and finding nearby recycling facilities on the map.*
 
 # Additional Demos
-[Add live hosted link here if applicable, e.g., https://receiptvision.onrender.com]
+[Live Demo: https://receiptvision.onrender.com](https://receiptvision.onrender.com)
 
 ## Team Contributions
 - [Name 1]: [Specific contributions - e.g., Frontend development, UI/UX, Maps integration]
