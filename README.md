@@ -71,7 +71,7 @@ For Hardware:
 
 ### Project Demo
 # Video
-[Add your demo video link here]
+[Watch Demo Video](./docs/recording.webm)
 *This video demonstrates scanning a sample grocery receipt, viewing the generated waste forecast, exploring disposal guidelines, and finding nearby recycling facilities on the map.*
 
 # Additional Demos
